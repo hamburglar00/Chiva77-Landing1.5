@@ -55,7 +55,7 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error("❌ Error al obtener número:", err.message);
     return res.status(200).json({
-      number: "549",
+      number: "5491169789243",
       name: "Soporte Gera",
       agency_id: "fallback",
       weight: 1,
