@@ -12,7 +12,7 @@
   <link rel="dns-prefetch" href="//connect.facebook.net">
   <link rel="preload" href="imagenes/fondo.png" as="image">
 
- <!-- Meta Pixel Code (con coincidencias avanzadas) -->
+  <!-- Meta Pixel Code (con coincidencias avanzadas) -->
   <script>
     function normEmail(v){return(v||"").trim().toLowerCase();}
     function normPhone(v){let p=(v||"").replace(/\D+/g,"");if(p&&p.length===10)p="54"+p;return p;}
@@ -52,6 +52,29 @@
 
       <p class="subtitle">Mínimo de carga: 1.000<br />Sín Límite de retiro<br />Ganás y cobrás a cualquier hora</p>
       <p class="description">-GERA GANAMOS-</p>
+    </div>
+  </div>
+
+  <!-- ✅ Floating WhatsApp + Burbuja -->
+  <div id="wa-float" class="wa-float" aria-hidden="false">
+    <button id="wa-float-btn" class="wa-float__btn" aria-label="Abrir WhatsApp">
+      <img src="imagenes/whatsapp.png" alt="whatsapp" class="wa-float__icon" />
+    </button>
+
+    <div id="wa-bubble" class="wa-bubble" role="dialog" aria-label="Chat WhatsApp">
+      <div class="wa-bubble__header">
+        <div class="wa-bubble__title">WhatsApp</div>
+        <button id="wa-bubble-close" class="wa-bubble__close" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="wa-bubble__body">
+        <div class="wa-msg wa-msg--bot">Hola! Quiero info</div>
+      </div>
+
+      <div class="wa-bubble__footer">
+        <input id="wa-input" class="wa-input" type="text" value="Hola! Quiero info" />
+        <button id="wa-send" class="wa-send">Enviar</button>
+      </div>
     </div>
   </div>
 
@@ -111,94 +134,186 @@ async function detectarGeo(timeoutMs=700){try{const ctrl=new AbortController();c
   const res=await fetch("https://ipapi.co/json/",{signal:ctrl.signal,cache:"no-store"});clearTimeout(t);const d=await res.json();
   return{country:d.country||null,region:d.region||null,city:d.city||null};}catch{return{country:null,region:null,city:null};}}
 
+/*************** GENERADOR DE MENSAJE ***************/
+function buildMensaje(botName, promo_code){
+  const variantes = [
+    n => `Hola ${n}! Vi este anuncio, me pasás info?`,
+    n => `Hola ${n}! Vi el anuncio, podrías darme más info?`,
+    n => `Buenas ${n}! Me contás un poco más del anuncio?`,
+    n => `Hola ${n}! Quisiera saber más sobre lo que ofrecen.`,
+    n => `Buenas ${n}! Me das más detalles por favor?`,
+    n => `Hola ${n}! Estoy interesado, me contás cómo funciona?`,
+    n => `Hola ${n}! Vi tu publicación, podrías ampliarme la info?`,
+    n => `Holaaa ${n}! Me llamó la atención el anuncio, me contás más?`,
+    n => `Hola ${n}! Vi tu publicidad, cómo es para registrarse?`,
+    n => `Buenas ${n}! Me das información sobre cómo empezar?`,
+    n => `Qué tal ${n}! Me podés explicar cómo funciona?`,
+    n => `Hola ${n}! Quisiera saber cómo se juega, me ayudás?`,
+    n => `Holaaa ${n}! Vi el anuncio, me pasás los pasos para entrar?`,
+    n => `Buenas ${n}! Me interesa, me contás un poco más?`,
+    n => `Hola ${n}! Vi su anuncio, tienen bono de bienvenida?`,
+    n => `Holaaa ${n}! Me podés contar un poco más del sistema?`,
+    n => `Buenas ${n}! Vi la publicidad y quiero saber más.`,
+    n => `Hola ${n}! Cómo hago para crear mi usuario?`,
+    n => `Holaaa ${n}! Me gustaría probar, cómo empiezo?`,
+    n => `Buenas ${n}! Me interesa, cómo funciona la plataforma?`,
+    n => `Hola ${n}! Me pasás info sobre cómo registrarme?`,
+    n => `Holaaa ${n}! Me contás más sobre lo que ofrecen?`,
+    n => `Buenas ${n}! Vi su anuncio, me explicás cómo participar?`,
+    n => `Hola ${n}! Vi este anuncio y quiero saber cómo funciona.`,
+    n => `Holaaa ${n}! Me podrías dar más información?`,
+    n => `Buenas ${n}! Estoy interesado, me pasás más detalles?`,
+    n => `Hola ${n}! Vi el anuncio y quiero saber cómo se juega.`,
+    n => `Holaaa ${n}! Vi la publi, me contás de qué trata?`,
+    n => `Buenas ${n}! Quiero saber más sobre el servicio que ofrecen.`,
+    n => `Hola ${n}! Podés darme más info sobre cómo arrancar?`,
+    n => `Holaaa ${n}! Me explicás cómo funciona el proceso?`,
+    n => `Buenas ${n}! Me interesa participar, me contás cómo es?`,
+    n => `Hola ${n}! Vi la publicidad, me das más detalles?`,
+    n => `Holaaa ${n}! Quisiera saber cómo puedo registrarme.`,
+    n => `Buenas ${n}! Vi el anuncio y quiero empezar, cómo hago?`,
+    n => `Hola ${n}! Estoy interesado en más información.`,
+    n => `Holaaa ${n}! Me contás cómo es el tema del registro?`,
+    n => `Buenas ${n}! Vi la publicación y me gustaría saber más.`,
+    n => `Hola ${n}! Me explicás cómo se gana o cómo funciona?`,
+    n => `Holaaa ${n}! Me gustaría saber más antes de registrarme.`,
+    n => `Buenas ${n}! Vi el anuncio y quiero info para empezar.`,
+    n => `Hola ${n}! Podés contarme cómo es el proceso paso a paso?`,
+    n => `Holaaa ${n}! Vi su publicidad, me gustaría más info.`,
+    n => `Buenas ${n}! Me interesa, tienen algún bono de registro?`,
+    n => `Hola ${n}! Cómo hago para jugar o participar?`,
+    n => `Holaaa ${n}! Me podés dar más info por favor?`,
+    n => `Buenas ${n}! Vi su anuncio, me gustaría probar.`,
+    n => `Hola ${n}! Vi la publicación y quiero saber más detalles.`,
+    n => `Holaaa ${n}! Me interesa lo que ofrecen, cómo empiezo?`
+  ];
+
+  const base = variantes[Math.floor(Math.random()*variantes.length)](botName || "Soporte");
+  return promo_code ? `${base} ${promo_code}` : base;
+}
+
+/*************** CONTACTAR (única lógica) ***************/
+async function contactarWhatsApp({ source="main_button", customText=null } = {}){
+  if (window.__waInFlight) return;
+  window.__waInFlight = true;
+
+  // números (cacheados)
+  const activeNumbers = (window.__activeNumbers && window.__activeNumbers.length)
+    ? window.__activeNumbers
+    : CONFIG_FRONT.FALLBACK;
+
+  const picked = activeNumbers.length ? pickWeightedRandom(activeNumbers) : CONFIG_FRONT.FALLBACK[0];
+  const telefono = picked.number;
+  const botName  = picked.name;
+
+  const cleanPhone = String(telefono).replace("+","").trim();
+  const external_id = getOrCreateExternalId();
+  const event_id = generateUUID();
+  const event_source_url = location.href;
+  const fbp = getFbp();
+  const fbc = getFbc();
+
+  const uuidSegment = generateUUID().replace(/-/g,"").slice(0,12);
+  const promo_code = CONFIG_FRONT.ENVIAR_PROMO_CODE ? `${CONFIG_FRONT.LANDING_TAG}-${uuidSegment}` : "";
+
+  const mensaje = (customText && String(customText).trim())
+    ? (promo_code ? `${String(customText).trim()} ${promo_code}` : String(customText).trim())
+    : buildMensaje(botName, promo_code);
+
+  // Pixel
+  if (window.fbq){
+    fbq("track","Contact",{content_name:"Botón WhatsApp",content_category:"LeadGen",event_source:"Landing TotiyLola",source});
+  }
+
+  // Abrir WA
+  setTimeout(()=>{ window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(mensaje)}`,"_blank","noopener"); }, 200);
+
+  // Backend / Sheets / CAPI
+  try{
+    const geo = await detectarGeo();
+    const payload = {
+      event_name:"Contact",
+      event_id,
+      external_id,
+      event_source_url,
+      fbp,
+      fbc,
+      email:getQueryParam("email"),
+      phone:getQueryParam("phone"),
+      fn:getQueryParam("fn"),
+      ln:getQueryParam("ln"),
+      ct:getQueryParam("ct"),
+      st:getQueryParam("st"),
+      zip:getQueryParam("zip"),
+      country:getQueryParam("country"),
+      geo_city:geo.city,
+      geo_region:geo.region,
+      geo_country:geo.country,
+      utm_campaign:getQueryParam("utm_campaign"),
+      telefono_asignado:cleanPhone,
+      device_type:getDeviceType(),
+      promo_code,
+      source
+    };
+
+    fetch("/api/xz3v2q",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(payload),
+      keepalive:true
+    }).catch(console.error);
+  } finally {
+    setTimeout(()=>{ window.__waInFlight = false; }, 800);
+  }
+}
+
 /*************** PRINCIPAL ***************/
 document.addEventListener("DOMContentLoaded",()=>{
-  const btn=document.getElementById("whatsappButton");
-  if(!btn)return;
-  let waInFlight=false,activeNumbers=[];
-  loadNumbersOnce().then(list=>activeNumbers=list);
+  const btn = document.getElementById("whatsappButton");
+  if(!btn) return;
 
-  btn.addEventListener("click",async e=>{
-    e.preventDefault();if(waInFlight)return;waInFlight=true;
-    const {number:telefono,name:botName}=activeNumbers.length?pickWeightedRandom(activeNumbers):CONFIG_FRONT.FALLBACK[0];
-    const cleanPhone = telefono.replace("+","").trim();
-    const external_id=getOrCreateExternalId(),event_id=generateUUID(),event_source_url=location.href,fbp=getFbp(),fbc=getFbc();
-    const uuidSegment=generateUUID().replace(/-/g,"").slice(0,12);
-    const promo_code=CONFIG_FRONT.ENVIAR_PROMO_CODE?`${CONFIG_FRONT.LANDING_TAG}-${uuidSegment}`:"";
+  // precarga números para ambos botones
+  window.__activeNumbers = [];
+  loadNumbersOnce().then(list => { window.__activeNumbers = list || []; });
 
-    const variantes = [
-      n => `Hola ${n}! Vi este anuncio, me pasás info?`,
-      n => `Hola ${n}! Vi el anuncio, podrías darme más info?`,
-      n => `Buenas ${n}! Me contás un poco más del anuncio?`,
-      n => `Hola ${n}! Quisiera saber más sobre lo que ofrecen.`,
-      n => `Buenas ${n}! Me das más detalles por favor?`,
-      n => `Hola ${n}! Estoy interesado, me contás cómo funciona?`,
-      n => `Hola ${n}! Vi tu publicación, podrías ampliarme la info?`,
-      n => `Holaaa ${n}! Me llamó la atención el anuncio, me contás más?`,
-      n => `Hola ${n}! Vi tu publicidad, cómo es para registrarse?`,
-      n => `Buenas ${n}! Me das información sobre cómo empezar?`,
-      n => `Qué tal ${n}! Me podés explicar cómo funciona?`,
-      n => `Hola ${n}! Quisiera saber cómo se juega, me ayudás?`,
-      n => `Holaaa ${n}! Vi el anuncio, me pasás los pasos para entrar?`,
-      n => `Buenas ${n}! Me interesa, me contás un poco más?`,
-      n => `Hola ${n}! Vi su anuncio, tienen bono de bienvenida?`,
-      n => `Holaaa ${n}! Me podés contar un poco más del sistema?`,
-      n => `Buenas ${n}! Vi la publicidad y quiero saber más.`,
-      n => `Hola ${n}! Cómo hago para crear mi usuario?`,
-      n => `Holaaa ${n}! Me gustaría probar, cómo empiezo?`,
-      n => `Buenas ${n}! Me interesa, cómo funciona la plataforma?`,
-      n => `Hola ${n}! Me pasás info sobre cómo registrarme?`,
-      n => `Holaaa ${n}! Me contás más sobre lo que ofrecen?`,
-      n => `Buenas ${n}! Vi su anuncio, me explicás cómo participar?`,
-      n => `Hola ${n}! Vi este anuncio y quiero saber cómo funciona.`,
-      n => `Holaaa ${n}! Me podrías dar más información?`,
-      n => `Buenas ${n}! Estoy interesado, me pasás más detalles?`,
-      n => `Hola ${n}! Vi el anuncio y quiero saber cómo se juega.`,
-      n => `Holaaa ${n}! Vi la publi, me contás de qué trata?`,
-      n => `Buenas ${n}! Quiero saber más sobre el servicio que ofrecen.`,
-      n => `Hola ${n}! Podés darme más info sobre cómo arrancar?`,
-      n => `Holaaa ${n}! Me explicás cómo funciona el proceso?`,
-      n => `Buenas ${n}! Me interesa participar, me contás cómo es?`,
-      n => `Hola ${n}! Vi la publicidad, me das más detalles?`,
-      n => `Holaaa ${n}! Quisiera saber cómo puedo registrarme.`,
-      n => `Buenas ${n}! Vi el anuncio y quiero empezar, cómo hago?`,
-      n => `Hola ${n}! Estoy interesado en más información.`,
-      n => `Holaaa ${n}! Me contás cómo es el tema del registro?`,
-      n => `Buenas ${n}! Vi la publicación y me gustaría saber más.`,
-      n => `Hola ${n}! Me explicás cómo se gana o cómo funciona?`,
-      n => `Holaaa ${n}! Me gustaría saber más antes de registrarme.`,
-      n => `Buenas ${n}! Vi el anuncio y quiero info para empezar.`,
-      n => `Hola ${n}! Podés contarme cómo es el proceso paso a paso?`,
-      n => `Holaaa ${n}! Vi su publicidad, me gustaría más info.`,
-      n => `Buenas ${n}! Me interesa, tienen algún bono de registro?`,
-      n => `Hola ${n}! Cómo hago para jugar o participar?`,
-      n => `Holaaa ${n}! Me podés dar más info por favor?`,
-      n => `Buenas ${n}! Vi su anuncio, me gustaría probar.`,
-      n => `Hola ${n}! Vi la publicación y quiero saber más detalles.`,
-      n => `Holaaa ${n}! Me interesa lo que ofrecen, cómo empiezo?`
-    ];
+  // Botón grande
+  btn.addEventListener("click", async (e)=>{
+    e.preventDefault();
+    contactarWhatsApp({ source: "main_button" });
+  });
 
+  // Floating + burbuja
+  const floatBtn = document.getElementById("wa-float-btn");
+  const bubble   = document.getElementById("wa-bubble");
+  const closeBtn = document.getElementById("wa-bubble-close");
+  const sendBtn  = document.getElementById("wa-send");
+  const input    = document.getElementById("wa-input");
 
-    const base=variantes[Math.floor(Math.random()*variantes.length)](botName);
-    const mensaje=promo_code?`${base} ${promo_code}`:base;
+  let openedOnce = false;
+  function openBubble(){ bubble.classList.add("is-open"); openedOnce = true; }
+  function closeBubble(){ bubble.classList.remove("is-open"); }
+  function toggleBubble(){ bubble.classList.toggle("is-open"); openedOnce = true; }
 
-    if(window.fbq){
-      fbq("track","Contact",{content_name:"Botón WhatsApp",content_category:"LeadGen",event_source:"Landing TotiyLola"});
+  // aparece a los 2s
+  window.addEventListener("load", ()=>{
+    setTimeout(()=>{ if(!openedOnce) openBubble(); }, 2000);
+  });
+
+  floatBtn.addEventListener("click", toggleBubble);
+  closeBtn.addEventListener("click", closeBubble);
+
+  sendBtn.addEventListener("click", ()=>{
+    const text = (input.value || "Hola! Quiero info").trim();
+    contactarWhatsApp({ source:"floating", customText: text });
+    closeBubble();
+  });
+
+  input.addEventListener("keydown", (e)=>{
+    if(e.key === "Enter"){
+      const text = (input.value || "Hola! Quiero info").trim();
+      contactarWhatsApp({ source:"floating", customText: text });
+      closeBubble();
     }
-
-    setTimeout(()=>{window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(mensaje)}`,"_blank","noopener");},200);
-
-    detectarGeo().then(geo=>{
-      const payload={event_name:"Contact",event_id,external_id,event_source_url,fbp,fbc,
-        email:getQueryParam("email"),phone:getQueryParam("phone"),fn:getQueryParam("fn"),
-        ln:getQueryParam("ln"),ct:getQueryParam("ct"),st:getQueryParam("st"),
-        zip:getQueryParam("zip"),country:getQueryParam("country"),
-        geo_city:geo.city,geo_region:geo.region,geo_country:geo.country,
-        utm_campaign:getQueryParam("utm_campaign"),telefono_asignado:cleanPhone,
-        device_type:getDeviceType(),promo_code};
-      fetch("/api/xz3v2q",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload),keepalive:true})
-      .catch(console.error).finally(()=>{setTimeout(()=>{waInFlight=false;},800)});
-    });
   });
 });
 </script>
