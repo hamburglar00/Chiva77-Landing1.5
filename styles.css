@@ -240,3 +240,42 @@ body {
   color: #0b130c;
   background: rgba(255, 215, 0, .95);
 }
+.wa-redirect-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0,0,0,.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.wa-redirect-box{
+  width: min(360px, calc(100vw - 32px));
+  background: rgba(15, 20, 15, .92);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 16px 40px rgba(0,0,0,.55);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.wa-redirect-text{
+  font-weight: 800;
+  color: #fff;
+}
+
+.wa-redirect-spinner{
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 3px solid rgba(255,255,255,.25);
+  border-top-color: rgba(255,215,0,.95);
+  animation: waSpin .8s linear infinite;
+}
+
+@keyframes waSpin { to { transform: rotate(360deg); } }
+
