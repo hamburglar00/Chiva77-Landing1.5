@@ -78,6 +78,14 @@
     </div>
   </div>
 
+  <!-- ✅ Overlay auto-redirect -->
+  <div id="wa-redirect-overlay" class="wa-redirect-overlay" hidden>
+    <div class="wa-redirect-box">
+      <div class="wa-redirect-spinner"></div>
+      <div id="wa-redirect-text" class="wa-redirect-text">Redirigiendo al Whatsapp del Cajero...</div>
+    </div>
+  </div>
+
 <script>
 /*************** CONFIGURACIÓN ***************/
 const CONFIG_FRONT = {
@@ -86,7 +94,12 @@ const CONFIG_FRONT = {
   TTL_MS: 5*60*1000,
   LS_KEY: "active_whatsapp_numbers:totiylola",
   ENVIAR_PROMO_CODE: true,
-  LANDING_TAG: "CH1"
+  LANDING_TAG: "CH1",
+
+  // ✅ Auto-redirect (FLAG)
+  AUTO_REDIRECT_ENABLED: false,          // <- ponelo true para activar
+  AUTO_REDIRECT_DELAY_MS: 10000,         // 10 segundos
+  AUTO_REDIRECT_TEXT: "Redirigiendo al Whatsapp del Cajero..."
 };
 
 /*************** FUNCIONES AUXILIARES ***************/
@@ -235,7 +248,6 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
     );
   }
 
-
   // Abrir WA
   setTimeout(()=>{ window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(mensaje)}`,"_blank","noopener"); }, 200);
 
@@ -305,7 +317,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   function closeBubble(){ bubble.classList.remove("is-open"); }
   function toggleBubble(){ bubble.classList.toggle("is-open"); openedOnce = true; }
 
-  // aparece a los 2s
+  // aparece a los 3.5s
   window.addEventListener("load", ()=>{
     setTimeout(()=>{ if(!openedOnce) openBubble(); }, 3500);
   });
@@ -326,6 +338,32 @@ document.addEventListener("DOMContentLoaded",()=>{
       closeBubble();
     }
   });
+
+  // ✅ Auto redirect (flag)
+  if (CONFIG_FRONT.AUTO_REDIRECT_ENABLED) {
+    const KEY = "wa_auto_redirect_fired";
+    const already = sessionStorage.getItem(KEY) === "1";
+
+    window.addEventListener("load", () => {
+      setTimeout(() => {
+        if (already) return;
+        if (window.__waInFlight) return;
+
+        sessionStorage.setItem(KEY, "1");
+
+        const ov = document.getElementById("wa-redirect-overlay");
+        const tx = document.getElementById("wa-redirect-text");
+        if (tx) tx.textContent = CONFIG_FRONT.AUTO_REDIRECT_TEXT || "Redirigiendo al Whatsapp del Cajero...";
+        if (ov) ov.hidden = false;
+
+        contactarWhatsApp({
+          source: "auto_redirect",
+          customText: "Redirigiendo al Whatsapp del Cajero..."
+        });
+
+      }, CONFIG_FRONT.AUTO_REDIRECT_DELAY_MS || 10000);
+    });
+  }
 });
 </script>
 </body>
