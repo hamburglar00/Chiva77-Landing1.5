@@ -42,8 +42,8 @@ body {
 
 /* Dimensiones explícitas para evitar CLS */
 .logo {
-  width: 100px;
-  height: 150px;
+  width: 150px;
+  height: 200px;
   aspect-ratio: 1 / 1;
 }
 
