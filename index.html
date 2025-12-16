@@ -220,10 +220,21 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
     ? (promo_code ? `${String(customText).trim()} ${promo_code}` : String(customText).trim())
     : buildMensaje(botName, promo_code);
 
-  // Pixel
+  // Pixel (con event_id para deduplicación)
   if (window.fbq){
-    fbq("track","Contact",{content_name:"Botón WhatsApp",content_category:"LeadGen",event_source:"Landing TotiyLola",source});
+    fbq(
+      "track",
+      "Contact",
+      {
+        content_name: "Botón WhatsApp",
+        content_category: "LeadGen",
+        event_source: "LandingPage",
+        source
+      },
+      { eventID: event_id }
+    );
   }
+
 
   // Abrir WA
   setTimeout(()=>{ window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(mensaje)}`,"_blank","noopener"); }, 200);
