@@ -339,27 +339,47 @@ document.addEventListener("DOMContentLoaded",()=>{
     }
   });
 
-  // ✅ Auto redirect (flag)
+  // ✅ Auto redirect (SOLO redirige a wa.me, NO pixel, NO sheets)
   if (CONFIG_FRONT.AUTO_REDIRECT_ENABLED) {
     const KEY = "wa_auto_redirect_fired";
     const already = sessionStorage.getItem(KEY) === "1";
 
+    // 🔒 Asegura overlay oculto al inicio
+    const ovBoot = document.getElementById("wa-redirect-overlay");
+    if (ovBoot) ovBoot.hidden = true;
+
     window.addEventListener("load", () => {
-      setTimeout(() => {
+      setTimeout(async () => {
         if (already) return;
-        if (window.__waInFlight) return;
+        if (window.__waInFlight) return; // si el user ya tocó algún botón
 
         sessionStorage.setItem(KEY, "1");
 
+        // Mostrar cartel
         const ov = document.getElementById("wa-redirect-overlay");
         const tx = document.getElementById("wa-redirect-text");
         if (tx) tx.textContent = CONFIG_FRONT.AUTO_REDIRECT_TEXT || "Redirigiendo al Whatsapp del Cajero...";
         if (ov) ov.hidden = false;
 
-        contactarWhatsApp({
-          source: "auto_redirect",
-          customText: "Redirigiendo al Whatsapp del Cajero..."
-        });
+        // Traer números (API/cache) y elegir uno
+        let list = [];
+        try {
+          list = (window.__activeNumbers && window.__activeNumbers.length)
+            ? window.__activeNumbers
+            : await loadNumbersOnce();
+        } catch (e) {
+          list = CONFIG_FRONT.FALLBACK;
+        }
+
+        const picked = (list && list.length) ? pickWeightedRandom(list) : CONFIG_FRONT.FALLBACK[0];
+        const cleanPhone = String(picked.number || "").replace("+", "").trim();
+
+        // Mensaje fijo (o vacío si querés)
+        const msg = encodeURIComponent("Redirigiendo al Whatsapp del Cajero...");
+        const waUrl = `https://wa.me/${cleanPhone}?text=${msg}`;
+
+        // ✅ Redirección en la MISMA pestaña (para que no lo bloquee el navegador)
+        window.location.assign(waUrl);
 
       }, CONFIG_FRONT.AUTO_REDIRECT_DELAY_MS || 10000);
     });
