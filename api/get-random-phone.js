@@ -1,64 +1,55 @@
 // /api/get-random-phone.js
 export default async function handler(req, res) {
   try {
-    const AGENCIES = [
-      { id: 17, name: "Gera" }
-    ];
+    /************ CONFIG POR LANDING ************/
+    const AGENCY_ID = 17;               // ← cambiar
+    const BRAND_NAME = "Geraldina";     // ← cambiar
+    const FALLBACK_ADS = "5491169789243";     // ← cambiar
+    const FALLBACK_NORMAL = "5491169789243";  // ← cambiar
+    /*******************************************/
 
-    const randomAgency = AGENCIES[Math.floor(Math.random() * AGENCIES.length)];
-    const API_URL = `https://api.asesadmin.com/api/v1/agency/${randomAgency.id}/random-phone`;
+    const mode = String(req.query.mode || "normal").toLowerCase();
+    const API_URL = `https://api.asesadmin.com/api/v1/agency/${AGENCY_ID}/random-contact`;
 
-    let phone = null, lastError = null;
+    const response = await fetch(API_URL, {
+      headers: { "Cache-Control": "no-store" },
+    });
 
-    for (let attempt = 1; attempt <= 2 && !phone; attempt++) {
-      try {
-        const ctrl = new AbortController();
-        const timeout = setTimeout(() => ctrl.abort(), 5000);
+    if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
 
-        const response = await fetch(API_URL, {
-          headers: { "Cache-Control": "no-store" },
-          signal: ctrl.signal,
-        });
+    const data = await response.json();
 
-        clearTimeout(timeout);
+    const list = mode === "ads"
+      ? (data?.ads?.whatsapp || [])
+      : (data?.whatsapp || []);
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const data = await response.json();
-
-        phone =
-          data?.phone_number ||
-          data?.phone ||
-          data?.number ||
-          data?.data?.number ||
-          data?.data?.phone ||
-          data?.data?.phone_number ||
-          null;
-
-        if (phone) phone = String(phone).replace(/\D/g, "");
-        if (!phone || phone.length < 8) throw new Error("Número inválido");
-
-      } catch (err) {
-        lastError = err;
-        await new Promise(r => setTimeout(r, 200));
-      }
+    if (!Array.isArray(list) || list.length === 0) {
+      throw new Error(`No hay números disponibles para mode=${mode}`);
     }
 
-    if (!phone) throw lastError || new Error("No se obtuvo número válido");
+    let phone = String(list[Math.floor(Math.random() * list.length)] || "").replace(/\D+/g, "");
+    if (phone.length === 10) phone = "54" + phone;
+    if (!phone || phone.length < 8) throw new Error("Número inválido");
+
+    res.setHeader("Cache-Control", "no-store, max-age=0");
 
     return res.status(200).json({
       number: phone,
-      name: randomAgency.name,
-      agency_id: randomAgency.id,
+      name: mode === "ads" ? `${BRAND_NAME}_ADS` : BRAND_NAME,
       weight: 1,
+      mode,
     });
 
   } catch (err) {
+    const mode = String(req.query.mode || "normal").toLowerCase();
+
     return res.status(200).json({
-      number: "5491169789243",
-      name: "Soporte Gera",
-      agency_id: "fallback",
+      number: mode === "ads" ? FALLBACK_ADS : FALLBACK_NORMAL,
+      name: "Fallback",
       weight: 1,
+      mode,
+      fallback: true,
+      error: err?.message,
     });
   }
 }
