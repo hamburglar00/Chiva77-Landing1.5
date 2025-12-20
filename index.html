@@ -7,7 +7,7 @@
   <link rel="icon" href="imagenes/favicon.png" type="image/png" />
   <link rel="stylesheet" href="./styles.css" />
 
-  <!-- Performancee -->
+  <!-- Performance -->
   <link rel="preconnect" href="https://connect.facebook.net" crossorigin>
   <link rel="dns-prefetch" href="//connect.facebook.net">
   <link rel="preload" href="imagenes/fondo.png" as="image">
@@ -18,39 +18,43 @@
     function normPhone(v){let p=(v||"").replace(/\D+/g,"");if(p&&p.length===10)p="54"+p;return p;}
     function safeUUID(){return crypto?.randomUUID?.()||"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==="x"?r:r&0x3|0x8;return v.toString(16)})}
     function getOrCreateExternalId(){let id=localStorage.getItem("external_id");if(!id){id=safeUUID();localStorage.setItem("external_id",id);}return id;}
+
     const params=new URLSearchParams(location.search);
     const userEmail=normEmail(params.get("email"));
     const userPhone=normPhone(params.get("phone"));
     const externalId=getOrCreateExternalId();
+
     !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
     n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
     n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
     t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
+
     window.fbq=window.fbq||function(){console.warn("Meta Pixel no inicializado")};
+
+    // ⚠️ Editá solo el PIXEL_ID abajo (en LANDING_CONFIG también lo vas a definir para orden visual)
     fbq("init","868127886154248",{external_id:externalId,em:userEmail||void 0,ph:userPhone||void 0,country:"AR"});
     fbq("track","PageView");
   </script>
   <noscript><img height="1" width="1" style="display:none"
     src="https://www.facebook.com/tr?id=868127886154248&ev=PageView&noscript=1"/></noscript>
-  <!-- End Meta Pixel Code -->
 </head>
 
 <body>
   <div class="container background-image">
     <div class="overlay"></div>
     <div class="content">
-      <img src="imagenes/logo.png" class="logo" alt="Logo Chiva77"
+      <img src="imagenes/logo.png" class="logo" alt="Logo GERAGANAMOS"
            width="240" height="120" decoding="async" fetchpriority="high" />
       <p class="title">Envianos un WhatsApp<br />para crear tu cuenta</p>
 
-      <a class="whatsapp-button" id="whatsappButton">
+      <a class="whatsapp-button" id="whatsappButton" href="#" rel="noopener noreferrer" aria-label="Crear usuario por WhatsApp">
         <span>¡Pedí tu bono y empeza a jugar!</span>
         <img src="imagenes/whatsapp.png" alt="whatsapp" class="whatsapp-icon"
              width="24" height="24" decoding="async" loading="lazy" />
       </a>
 
-      <p class="subtitle">Mínimo de carga: 1.000<br />Sín Límite de retiro<br />Ganás y cobrás a cualquier hora</p>
+      <p class="subtitle">Mínimo de carga: 1.000<br />Sin Límite de retiro<br />Ganás y cobrás a cualquier hora</p>
       <p class="description">-GERA GANAMOS-</p>
     </div>
   </div>
@@ -87,29 +91,68 @@
   </div>
 
 <script>
-/*************** CONFIGURACIÓN ***************/
-const CONFIG_FRONT = {
-  SERVICE_URL: "/api/get-random-phone",
-  FALLBACK: [{ number: "5491169789243", name: "Soporte Gera", weight: 1 }],
-  TTL_MS: 5*60*1000,
-  LS_KEY: "active_whatsapp_numbers:totiylola",
-  ENVIAR_PROMO_CODE: true,
-  LANDING_TAG: "CH1",
+/************************************************************
+ * ✅ CONFIGURACIÓN POR LANDING (EDITAR SOLO ESTO)
+ ************************************************************/
+const LANDING_CONFIG = {
+  BRAND_NAME: "GERAGANAMOS",
 
-  // ✅ Auto-redirect (FLAG)
-  AUTO_REDIRECT_ENABLED: false,          // <- ponelo true para activar
-  AUTO_REDIRECT_DELAY_MS: 10000,         // 10 segundos
-  AUTO_REDIRECT_TEXT: "Redirigiendo al Whatsapp del Cajero..."
+  // ✅ Para publicidad
+  MODE: "ads", // "ads" | "normal"
+
+  // Endpoint interno (Next/Vercel) que a su vez consulta asesadmin
+  SERVICE_BASE: "/api/get-random-phone",
+
+  FALLBACK: [{ number: "5491169789243", name: "Soporte Gera", weight: 1 }],
+
+  CACHE: {
+    TTL_MS: 5 * 60 * 1000,
+    LS_KEY: "active_whatsapp_numbers:geraganamos:ads" // ✅ clave ADS (no mezclar con normal)
+  },
+
+  PROMO: {
+    ENABLED: true,
+    LANDING_TAG: "CH1"
+  },
+
+  UI: {
+    DEFAULT_INPUT_TEXT: "Hola! Quiero info",
+    AUTO_REDIRECT_ENABLED: false,
+    AUTO_REDIRECT_DELAY_MS: 10000,
+    AUTO_REDIRECT_TEXT: "Redirigiendo al Whatsapp del Cajero..."
+  }
 };
 
-/*************** FUNCIONES AUXILIARES ***************/
+/************************************************************
+ * ✅ GENÉRICO (NO TOCAR)
+ ************************************************************/
+const CONFIG_FRONT = {
+  SERVICE_URL: `${LANDING_CONFIG.SERVICE_BASE}?mode=${encodeURIComponent(LANDING_CONFIG.MODE)}`,
+  FALLBACK: LANDING_CONFIG.FALLBACK,
+  TTL_MS: LANDING_CONFIG.CACHE.TTL_MS,
+  LS_KEY: LANDING_CONFIG.CACHE.LS_KEY,
+  ENVIAR_PROMO_CODE: LANDING_CONFIG.PROMO.ENABLED,
+  LANDING_TAG: LANDING_CONFIG.PROMO.LANDING_TAG,
+  AUTO_REDIRECT_ENABLED: LANDING_CONFIG.UI.AUTO_REDIRECT_ENABLED,
+  AUTO_REDIRECT_DELAY_MS: LANDING_CONFIG.UI.AUTO_REDIRECT_DELAY_MS,
+  AUTO_REDIRECT_TEXT: LANDING_CONFIG.UI.AUTO_REDIRECT_TEXT
+};
+
 function fetchWithTimeout(url,opt={},ms=3000){
   const ctrl=new AbortController();const id=setTimeout(()=>ctrl.abort(),ms);
   return fetch(url,{...opt,signal:ctrl.signal}).finally(()=>clearTimeout(id));
 }
 function getCache(){try{return JSON.parse(localStorage.getItem(CONFIG_FRONT.LS_KEY)||"null");}catch{return null;}}
 function setCache(numbers){localStorage.setItem(CONFIG_FRONT.LS_KEY,JSON.stringify({ts:Date.now(),numbers}));}
-function normalizeNumbers(list){return(Array.isArray(list)?list:[]).map(n=>({number:String(n.number||n.phone||"").trim(),weight:Number(n.weight||1),name:n.name||"Toti"})).filter(n=>/^\+?\d{8,17}$/.test(n.number));}
+function normalizeNumbers(list){
+  return (Array.isArray(list)?list:[])
+    .map(n=>({
+      number:String(n.number||n.phone||"").trim(),
+      weight:Number(n.weight||1),
+      name:n.name || LANDING_CONFIG.BRAND_NAME
+    }))
+    .filter(n=>/^\+?\d{8,17}$/.test(n.number));
+}
 async function loadNumbersOnce(){
   const cached=getCache();
   try{
@@ -120,8 +163,8 @@ async function loadNumbersOnce(){
     if(list.length){setCache(list);return list;}
     throw new Error("Invalid data");
   }catch(e){
-    const ok=cached?.numbers?.length&&Date.now()-(cached.ts||0)<CONFIG_FRONT.TTL_MS;
-    return ok?cached.numbers:CONFIG_FRONT.FALLBACK;
+    const ok=cached?.numbers?.length && Date.now()-(cached.ts||0) < CONFIG_FRONT.TTL_MS;
+    return ok ? cached.numbers : CONFIG_FRONT.FALLBACK;
   }
 }
 function pickWeightedRandom(list){
@@ -131,10 +174,10 @@ function pickWeightedRandom(list){
   return list[list.length-1];
 }
 
-/*************** FUNCIONES CAPI Y GEO ***************/
 const qs=new URLSearchParams(location.search);
 const getQueryParam=p=>qs.get(p);
 const getCookie=name=>{const m=document.cookie.match(new RegExp("(^| )"+name+"=([^;]+)"));return m&&m[2];};
+
 function getFbc(){const c=getCookie("_fbc");if(c){localStorage.setItem("stored_fbc",c);return c;}
   const s=localStorage.getItem("stored_fbc");if(s)return s;const fbclid=getQueryParam("fbclid");
   if(!fbclid)return;const fbc=`fb.1.${Date.now()}.${fbclid}`;localStorage.setItem("stored_fbc",fbc);return fbc;}
@@ -147,7 +190,6 @@ async function detectarGeo(timeoutMs=700){try{const ctrl=new AbortController();c
   const res=await fetch("https://ipapi.co/json/",{signal:ctrl.signal,cache:"no-store"});clearTimeout(t);const d=await res.json();
   return{country:d.country||null,region:d.region||null,city:d.city||null};}catch{return{country:null,region:null,city:null};}}
 
-/*************** GENERADOR DE MENSAJE ***************/
 function buildMensaje(botName, promo_code){
   const variantes = [
     n => `Hola ${n}! Vi este anuncio, me pasás info?`,
@@ -205,21 +247,17 @@ function buildMensaje(botName, promo_code){
   return promo_code ? `${base} ${promo_code}` : base;
 }
 
-/*************** CONTACTAR (única lógica) ***************/
 async function contactarWhatsApp({ source="main_button", customText=null } = {}){
   if (window.__waInFlight) return;
   window.__waInFlight = true;
 
-  // números (cacheados)
   const activeNumbers = (window.__activeNumbers && window.__activeNumbers.length)
     ? window.__activeNumbers
     : CONFIG_FRONT.FALLBACK;
 
   const picked = activeNumbers.length ? pickWeightedRandom(activeNumbers) : CONFIG_FRONT.FALLBACK[0];
-  const telefono = picked.number;
-  const botName  = picked.name;
+  const cleanPhone = String(picked.number || "").replace("+","").trim();
 
-  const cleanPhone = String(telefono).replace("+","").trim();
   const external_id = getOrCreateExternalId();
   const event_id = generateUUID();
   const event_source_url = location.href;
@@ -231,27 +269,19 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
 
   const mensaje = (customText && String(customText).trim())
     ? (promo_code ? `${String(customText).trim()} ${promo_code}` : String(customText).trim())
-    : buildMensaje(botName, promo_code);
+    : buildMensaje(picked.name, promo_code);
 
-  // Pixel (con event_id para deduplicación)
+  // Pixel (dedup)
   if (window.fbq){
     fbq(
       "track",
       "Contact",
-      {
-        content_name: "Botón WhatsApp",
-        content_category: "LeadGen",
-        event_source: "LandingPage",
-        source
-      },
+      { content_name:"Botón WhatsApp", content_category:"LeadGen", event_source:"LandingPage", source },
       { eventID: event_id }
     );
   }
 
-  // Abrir WA
-  setTimeout(()=>{ window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(mensaje)}`,"_blank","noopener"); }, 200);
-
-  // Backend / Sheets / CAPI
+  // ✅ Backend / Sheets / CAPI (primero, para que no se corte por la redirección)
   try{
     const geo = await detectarGeo();
     const payload = {
@@ -276,7 +306,9 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
       telefono_asignado:cleanPhone,
       device_type:getDeviceType(),
       promo_code,
-      source
+      source,
+      brand: LANDING_CONFIG.BRAND_NAME,
+      mode: LANDING_CONFIG.MODE
     };
 
     fetch("/api/xz3v2q",{
@@ -285,22 +317,27 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
       body:JSON.stringify(payload),
       keepalive:true
     }).catch(console.error);
+
   } finally {
+    // ✅ Redirección WA después (más compatible que window.open)
+    setTimeout(()=>{
+      window.location.href = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(mensaje)}`;
+    }, 200);
+
     setTimeout(()=>{ window.__waInFlight = false; }, 800);
   }
 }
 
-/*************** PRINCIPAL ***************/
 document.addEventListener("DOMContentLoaded",()=>{
   const btn = document.getElementById("whatsappButton");
   if(!btn) return;
 
-  // precarga números para ambos botones
+  // precarga números
   window.__activeNumbers = [];
   loadNumbersOnce().then(list => { window.__activeNumbers = list || []; });
 
   // Botón grande
-  btn.addEventListener("click", async (e)=>{
+  btn.addEventListener("click",(e)=>{
     e.preventDefault();
     contactarWhatsApp({ source: "main_button" });
   });
@@ -312,56 +349,49 @@ document.addEventListener("DOMContentLoaded",()=>{
   const sendBtn  = document.getElementById("wa-send");
   const input    = document.getElementById("wa-input");
 
-  let openedOnce = false;
-  function openBubble(){ bubble.classList.add("is-open"); openedOnce = true; }
-  function closeBubble(){ bubble.classList.remove("is-open"); }
-  function toggleBubble(){ bubble.classList.toggle("is-open"); openedOnce = true; }
+  if (input) input.value = LANDING_CONFIG.UI.DEFAULT_INPUT_TEXT || "Hola! Quiero info";
 
-  // aparece a los 3.5s
+  let openedOnce = false;
+  function openBubble(){ if(bubble){ bubble.classList.add("is-open"); openedOnce = true; } }
+  function closeBubble(){ if(bubble){ bubble.classList.remove("is-open"); } }
+  function toggleBubble(){ if(bubble){ bubble.classList.toggle("is-open"); openedOnce = true; } }
+
   window.addEventListener("load", ()=>{
     setTimeout(()=>{ if(!openedOnce) openBubble(); }, 3500);
   });
 
-  floatBtn.addEventListener("click", toggleBubble);
-  closeBtn.addEventListener("click", closeBubble);
+  if (floatBtn) floatBtn.addEventListener("click", toggleBubble);
+  if (closeBtn) closeBtn.addEventListener("click", closeBubble);
 
-  sendBtn.addEventListener("click", ()=>{
-    const text = (input.value || "Hola! Quiero info").trim();
+  function sendFromBubble(){
+    const text = (input?.value || LANDING_CONFIG.UI.DEFAULT_INPUT_TEXT || "Hola! Quiero info").trim();
     contactarWhatsApp({ source:"floating", customText: text });
     closeBubble();
-  });
+  }
 
-  input.addEventListener("keydown", (e)=>{
-    if(e.key === "Enter"){
-      const text = (input.value || "Hola! Quiero info").trim();
-      contactarWhatsApp({ source:"floating", customText: text });
-      closeBubble();
-    }
-  });
+  if (sendBtn) sendBtn.addEventListener("click", sendFromBubble);
+  if (input) input.addEventListener("keydown", (e)=>{ if(e.key==="Enter") sendFromBubble(); });
 
   // ✅ Auto redirect (SOLO redirige a wa.me, NO pixel, NO sheets)
   if (CONFIG_FRONT.AUTO_REDIRECT_ENABLED) {
     const KEY = "wa_auto_redirect_fired";
     const already = sessionStorage.getItem(KEY) === "1";
 
-    // 🔒 Asegura overlay oculto al inicio
     const ovBoot = document.getElementById("wa-redirect-overlay");
     if (ovBoot) ovBoot.hidden = true;
 
     window.addEventListener("load", () => {
       setTimeout(async () => {
         if (already) return;
-        if (window.__waInFlight) return; // si el user ya tocó algún botón
+        if (window.__waInFlight) return;
 
         sessionStorage.setItem(KEY, "1");
 
-        // Mostrar cartel
         const ov = document.getElementById("wa-redirect-overlay");
         const tx = document.getElementById("wa-redirect-text");
         if (tx) tx.textContent = CONFIG_FRONT.AUTO_REDIRECT_TEXT || "Redirigiendo al Whatsapp del Cajero...";
         if (ov) ov.hidden = false;
 
-        // Traer números (API/cache) y elegir uno
         let list = [];
         try {
           list = (window.__activeNumbers && window.__activeNumbers.length)
@@ -374,12 +404,8 @@ document.addEventListener("DOMContentLoaded",()=>{
         const picked = (list && list.length) ? pickWeightedRandom(list) : CONFIG_FRONT.FALLBACK[0];
         const cleanPhone = String(picked.number || "").replace("+", "").trim();
 
-        // Mensaje fijo (o vacío si querés)
-        const msg = encodeURIComponent("Redirigiendo al Whatsapp del Cajero...");
-        const waUrl = `https://wa.me/${cleanPhone}?text=${msg}`;
-
-        // ✅ Redirección en la MISMA pestaña (para que no lo bloquee el navegador)
-        window.location.assign(waUrl);
+        const msg = encodeURIComponent(CONFIG_FRONT.AUTO_REDIRECT_TEXT || "Redirigiendo al Whatsapp del Cajero...");
+        window.location.assign(`https://wa.me/${cleanPhone}?text=${msg}`);
 
       }, CONFIG_FRONT.AUTO_REDIRECT_DELAY_MS || 10000);
     });
