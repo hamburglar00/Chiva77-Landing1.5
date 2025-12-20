@@ -4,7 +4,7 @@ export default async function handler(req, res) {
     /************ CONFIG POR LANDING ************/
     const AGENCIES = [
       { id: 17, name: "Geraldina" }, // hoy una sola, mañana varias
-      // { id: 18, name: "OtraAgency" },
+   // { id: XX, name: "OtraAgency" },
     ];
 
     const BRAND_NAME = "Geraldina";          // ← cambiar si querés
