@@ -38,7 +38,7 @@ body {
 
 /* Evita CLS */
 .logo {
-  width: 200px;
+  width: 100px;
   height: 200px;
   aspect-ratio: 1 / 1;
 }
