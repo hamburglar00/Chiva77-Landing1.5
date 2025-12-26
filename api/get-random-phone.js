@@ -1,10 +1,7 @@
 // /api/get-random-phone.js
-// Objetivo: devolver SIEMPRE un número rápido, con planes A/B/C/D claros.
-//
-// Plan A) Upstream OK → número desde ads.whatsapp (prioridad) o whatsapp
-// Plan B) Retry rápido (por si el upstream “titubea”)
-// Plan C) Si falla upstream → LAST_GOOD_NUMBER (cache en memoria de la instancia)
-// Plan D) Si NO hay last-good → fallback de soporte (flag on/off). Si flag off → 503
+// ✅ Devuelve 1 número listo para usar en wa.me
+// ✅ Plan A/B/C/D
+// ✅ Flag simple: SOLO ADS o ADS+NORMAL
 
 let LAST_GOOD_NUMBER = null;
 let LAST_GOOD_META = null;
@@ -13,7 +10,7 @@ const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 function normalizePhone(raw) {
   let phone = String(raw || "").replace(/\D+/g, "");
-  if (phone.length === 10) phone = "54" + phone;
+  if (phone.length === 10) phone = "54" + phone; // AR
   if (!phone || phone.length < 8) return null;
   return phone;
 }
@@ -36,37 +33,39 @@ async function fetchJsonWithTimeout(url, timeoutMs) {
 export default async function handler(req, res) {
   const startedAt = Date.now();
 
-  // ✅ anti-cache (rápido + consistente)
+  // ✅ Cache-control fuerte (evita caches raros)
   res.setHeader("Cache-Control", "no-store, max-age=0");
   res.setHeader("Pragma", "no-cache");
 
-  /************ CONFIG POR LANDING ************/
-  const AGENCIES = [{ id: 17, name: "Geraldina" }];
-  const BRAND_NAME = "Geraldina";
-
-  // Plan D (flag): soporte
-  const SUPPORT_FALLBACK_ENABLED = true; // <- ponelo false cuando quieras “cero soporte”
-  const SUPPORT_FALLBACK_NUMBER = "5491169789243";
-
-  // Plan B: reintentos rápidos (prioridad: velocidad)
-  const TIMEOUT_MS = 1200; // ⏱️ timeout por intento
-  const MAX_RETRIES = 2;   // 🔁 reintentos
-  /*******************************************/
-
-  const mode = String(req.query.mode || "normal").toLowerCase();
-
   try {
-    // 1) Elegimos agency al azar
+    /************ CONFIG POR LANDING (EDITAR SOLO ESTO) ************/
+    const AGENCIES = [{ id: 17, name: "Geraldina" }];
+    const BRAND_NAME = "Geraldina";
+
+    // 🔥 FLAG PRINCIPAL:
+    // true  => SOLO usa data.ads.whatsapp
+    // false => usa data.ads.whatsapp y si está vacío, usa data.whatsapp
+    const ONLY_ADS_WHATSAPP = true;
+
+    // ✅ soporte controlado por flag
+    const SUPPORT_FALLBACK_ENABLED = true; // ponelo false cuando ya estés seguro
+    const SUPPORT_FALLBACK_NUMBER = "5491169789243";
+
+    // ✅ agresivo (prioridad: velocidad)
+    const TIMEOUT_MS = 1200;
+    const MAX_RETRIES = 2;
+    /**************************************************************/
+
+    const mode = String(req.query.mode || "normal").toLowerCase();
+
     const agency = AGENCIES[Math.floor(Math.random() * AGENCIES.length)];
     if (!agency?.id) throw new Error("No hay agencies configuradas");
 
     const API_URL = `https://api.asesadmin.com/api/v1/agency/${agency.id}/random-contact`;
 
-    // =========================
-    // Plan A + Plan B
-    // =========================
-    // A) Pedimos al upstream (asesadmin) el JSON
-    // B) Si falla, reintentamos rápido
+    // ============================================================
+    // ✅ Plan A: llamar upstream con timeout + retries
+    // ============================================================
     let data = null;
     let lastFetchError = null;
 
@@ -82,41 +81,50 @@ export default async function handler(req, res) {
       throw new Error(`Upstream fail: ${lastFetchError?.message || "unknown"}`);
     }
 
-    // Jerarquía pedida:
-    // 1) ads.whatsapp
-    // 2) whatsapp
+    // ============================================================
+    // ✅ Plan B: elegir número según FLAG
+    // ============================================================
     const adsList = Array.isArray(data?.ads?.whatsapp) ? data.ads.whatsapp : [];
     const normalList = Array.isArray(data?.whatsapp) ? data.whatsapp : [];
 
-    let chosenSource = null;
     let rawPhone = null;
+    let chosenSource = null;
 
-    if (adsList.length > 0) {
+    if (ONLY_ADS_WHATSAPP) {
+      // 🚨 SOLO ADS
+      if (!adsList.length) {
+        throw new Error("ONLY_ADS_WHATSAPP activo y ads.whatsapp vacío");
+      }
       rawPhone = pickRandom(adsList);
       chosenSource = "ads.whatsapp";
-    } else if (normalList.length > 0) {
-      rawPhone = pickRandom(normalList);
-      chosenSource = "whatsapp";
     } else {
-      throw new Error("Listas vacías: ads.whatsapp y whatsapp");
+      // ✅ ADS primero, luego NORMAL
+      if (adsList.length) {
+        rawPhone = pickRandom(adsList);
+        chosenSource = "ads.whatsapp";
+      } else if (normalList.length) {
+        rawPhone = pickRandom(normalList);
+        chosenSource = "whatsapp";
+      } else {
+        throw new Error("Sin números disponibles (ads + normal)");
+      }
     }
 
     const phone = normalizePhone(rawPhone);
     if (!phone) throw new Error(`Número inválido desde ${chosenSource}`);
 
-    // =========================
-    // Plan C (LAST GOOD)
-    // =========================
-    // Guardamos “último bueno” para rescatar cuando el upstream falle.
-    // Nota: en serverless NO es persistente garantizado; dura lo que viva la instancia.
+    // ============================================================
+    // ✅ Plan C (server): guardar “último bueno” en memoria
+    // (en serverless puede persistir, pero NO es garantizado)
+    // ============================================================
     LAST_GOOD_NUMBER = phone;
     LAST_GOOD_META = {
       agency_id: agency.id,
       source: chosenSource,
+      only_ads: ONLY_ADS_WHATSAPP,
       ts: new Date().toISOString(),
     };
 
-    // ✅ Respuesta OK (A)
     return res.status(200).json({
       number: phone,
       name: mode === "ads" ? `${BRAND_NAME}_ADS` : BRAND_NAME,
@@ -124,13 +132,15 @@ export default async function handler(req, res) {
       mode,
       agency_id: agency.id,
       chosen_from: chosenSource,
-      plan_used: "A",
+      only_ads: ONLY_ADS_WHATSAPP,
       ms: Date.now() - startedAt,
     });
   } catch (err) {
-    // =========================
-    // Plan C (LAST GOOD)
-    // =========================
+    const mode = String(req.query.mode || "normal").toLowerCase();
+
+    // ============================================================
+    // ✅ Plan C (respuesta): si existe “último bueno”, devolverlo
+    // ============================================================
     if (LAST_GOOD_NUMBER && String(LAST_GOOD_NUMBER).length >= 8) {
       return res.status(200).json({
         number: LAST_GOOD_NUMBER,
@@ -140,14 +150,17 @@ export default async function handler(req, res) {
         cache: true,
         last_good_meta: LAST_GOOD_META || null,
         error: err?.message || "unknown_error",
-        plan_used: "C",
         ms: Date.now() - startedAt,
       });
     }
 
-    // =========================
-    // Plan D (SOPORTE, con flag)
-    // =========================
+    // ============================================================
+    // ✅ Plan D: soporte SOLO si flag ON, si no -> 503 real
+    // ============================================================
+    // (duplicados a propósito para que el catch sea auto-contenido)
+    const SUPPORT_FALLBACK_ENABLED = true;
+    const SUPPORT_FALLBACK_NUMBER = "5491169789243";
+
     if (SUPPORT_FALLBACK_ENABLED) {
       return res.status(200).json({
         number: SUPPORT_FALLBACK_NUMBER,
@@ -156,17 +169,14 @@ export default async function handler(req, res) {
         mode,
         fallback: true,
         error: err?.message || "unknown_error",
-        plan_used: "D",
         ms: Date.now() - startedAt,
       });
     }
 
-    // Si soporte está apagado y no hay last-good, devolvemos 503 real
     return res.status(503).json({
       error: "NO_NUMBER_AVAILABLE",
       mode,
       details: err?.message || "unknown_error",
-      plan_used: "NONE",
       ms: Date.now() - startedAt,
     });
   }
