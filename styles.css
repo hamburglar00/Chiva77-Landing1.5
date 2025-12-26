@@ -34,6 +34,7 @@ body{
   background:rgba(0,0,0,.7);
 }
 
+/* Contenedor central */
 .content{
   position:relative;
   text-align:center;
@@ -41,28 +42,34 @@ body{
   flex-direction:column;
   align-items:center;
   padding: 18px 14px;
+  width: min(92vw, 520px);
 }
 
-/* Evita CLS (mantené ancho/alto coherentes con tu IMG real) */
+/* ==========================
+   Logo (1:1 real, definido SOLO en CSS)
+   ========================== */
 .logo{
-  width: 240px;
-  aspect-ratio: 1 / 1;
-  height: auto;
-  object-fit: contain;
+  /* base mobile */
+  width: 200px;
+  height: 200px;         /* ✅ fuerza 1:1 */
+  object-fit: contain;   /* ✅ no deforma */
   display: block;
 }
 
-/* Tipografías */
+/* ==========================
+   Tipografías
+   ========================== */
 .title{
   margin: 10px 0 15px;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   line-height: 1.15;
+  text-wrap: balance;
 }
 
 .subtitle{
-  font-size: 19px;
-  margin-top: 40px;
+  font-size: 17px;
+  margin-top: 34px;
   line-height: 1.25;
 }
 
@@ -70,7 +77,7 @@ body{
   color: gold;
   font-size: 14px;
   font-weight: 800;
-  margin: 35px 0 50px;
+  margin: 28px 0 44px;
   letter-spacing: .2px;
 }
 
@@ -88,7 +95,7 @@ body{
 
   background: linear-gradient(145deg, #155c3d, #0e2d1e);
   color:#fff;
-  font-size:18px;
+  font-size:17px;
   font-weight:900;
 
   padding: 12px 16px;
@@ -96,7 +103,7 @@ body{
   border-radius: 10px;
   text-decoration:none;
 
-  margin-top: 25px;
+  margin-top: 22px;
   min-width: 220px;
 
   box-shadow:
@@ -112,6 +119,7 @@ body{
 }
 
 .whatsapp-button:active{ transform: scale(.985); }
+
 .whatsapp-button:focus-visible{
   outline: 3px solid rgba(255,215,0,.85);
   outline-offset: 3px;
@@ -320,4 +328,34 @@ body{
 
 @keyframes waSpin { to { transform: rotate(360deg); } }
 
+/* ==========================
+   Responsive (tablets + desktop)
+   ========================== */
+@media (min-width: 480px){
+  .logo{ width: 220px; height: 220px; }
+  .title{ font-size: 21px; }
+  .subtitle{ font-size: 18px; }
+  .whatsapp-button{ font-size: 18px; min-width: 240px; }
+}
 
+@media (min-width: 768px){
+  .logo{ width: 240px; height: 240px; }
+  .title{ font-size: 22px; }
+  .subtitle{ font-size: 19px; }
+  .description{ margin: 35px 0 50px; }
+}
+
+@media (min-width: 1024px){
+  /* un toque más aire en desktop */
+  .content{ padding: 22px 16px; }
+  .logo{ width: 260px; height: 260px; }
+  .whatsapp-button{ min-width: 260px; }
+}
+
+/* Safe area iOS (notch) */
+@supports (padding: max(0px)){
+  .wa-float{
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
