@@ -32,7 +32,6 @@
 
     window.fbq=window.fbq||function(){console.warn("Meta Pixel no inicializado")};
 
-    // ⚠️ Editá solo el PIXEL_ID abajo (en LANDING_CONFIG también lo vas a definir para orden visual)
     fbq("init","868127886154248",{external_id:externalId,em:userEmail||void 0,ph:userPhone||void 0,country:"AR"});
     fbq("track","PageView");
   </script>
@@ -109,7 +108,7 @@ const LANDING_CONFIG = {
 
   CACHE: {
     TTL_MS: 5 * 60 * 1000,
-    LS_KEY: "active_whatsapp_numbers:geraganamos:ads" // ✅ clave ADS (no mezclar con normal)
+    LS_KEY: "active_whatsapp_numbers:geraganamos:ads"
   },
 
   PROMO: {
@@ -120,7 +119,7 @@ const LANDING_CONFIG = {
   UI: {
     DEFAULT_INPUT_TEXT: "Hola! Quiero info",
     OVERLAY_TEXT: "Redirigiendo al Whatsapp del Cajero...",
-    CLICK_GET_NUMBER_DEADLINE_MS: 1500, // ✅ prioridad: conseguir número <= 1.5s
+    CLICK_GET_NUMBER_DEADLINE_MS: 1500,
     AUTO_REDIRECT_ENABLED: false,
     AUTO_REDIRECT_DELAY_MS: 10000,
     AUTO_REDIRECT_TEXT: "Redirigiendo al Whatsapp del Cajero..."
@@ -171,14 +170,24 @@ function hideRedirectOverlay(){
 function getCache(){try{return JSON.parse(localStorage.getItem(CONFIG_FRONT.LS_KEY)||"null");}catch{return null;}}
 function setCache(numbers){localStorage.setItem(CONFIG_FRONT.LS_KEY,JSON.stringify({ts:Date.now(),numbers}));}
 
+// ✅ normaliza fuerte (por si viene "+54 9..." o con espacios)
+function normalizePhoneDigits(raw){
+  const d = String(raw||"").replace(/\D+/g,"");
+  if(!d) return "";
+  return d;
+}
+
 function normalizeNumbers(list){
   return (Array.isArray(list)?list:[])
-    .map(n=>({
-      number:String(n.number||n.phone||"").trim(),
-      weight:Number(n.weight||1),
-      name:n.name || LANDING_CONFIG.BRAND_NAME
-    }))
-    .filter(n=>/^\+?\d{8,17}$/.test(n.number));
+    .map(n=>{
+      const digits = normalizePhoneDigits(n.number||n.phone||"");
+      return {
+        number: digits,
+        weight: Number(n.weight||1),
+        name: n.name || LANDING_CONFIG.BRAND_NAME
+      };
+    })
+    .filter(n => /^\d{8,17}$/.test(n.number));
 }
 
 // ✅ Carga números (API) con fallback a cache local; soporte SOLO si flag ON
@@ -186,7 +195,6 @@ async function loadNumbersOnce(){
   const cached = getCache();
 
   try{
-    // ✅ más agresivo (reduce “click sin número”)
     const res = await fetchWithTimeout(
       CONFIG_FRONT.SERVICE_URL,
       { headers: { "Cache-Control":"no-store" } },
@@ -203,11 +211,9 @@ async function loadNumbersOnce(){
     }
     throw new Error("Invalid data");
   } catch(e){
-    // 1) cache local primero
     const ok = cached?.numbers?.length && Date.now()-(cached.ts||0) < CONFIG_FRONT.TTL_MS;
     if (ok) return cached.numbers;
 
-    // 2) soporte SOLO si flag está ON
     return CONFIG_FRONT.SUPPORT_FALLBACK_ENABLED ? CONFIG_FRONT.FALLBACK : [];
   }
 }
@@ -266,48 +272,8 @@ function buildMensaje(botName, promo_code){
     n => `Hola ${n}! Vi tu publicación, podrías ampliarme la info?`,
     n => `Holaaa ${n}! Me llamó la atención el anuncio, me contás más?`,
     n => `Hola ${n}! Vi tu publicidad, cómo es para registrarse?`,
-    n => `Buenas ${n}! Me das información sobre cómo empezar?`,
-    n => `Qué tal ${n}! Me podés explicar cómo funciona?`,
-    n => `Hola ${n}! Quisiera saber cómo se juega, me ayudás?`,
-    n => `Holaaa ${n}! Vi el anuncio, me pasás los pasos para entrar?`,
-    n => `Buenas ${n}! Me interesa, me contás un poco más?`,
-    n => `Hola ${n}! Vi su anuncio, tienen bono de bienvenida?`,
-    n => `Holaaa ${n}! Me podés contar un poco más del sistema?`,
-    n => `Buenas ${n}! Vi la publicidad y quiero saber más.`,
-    n => `Hola ${n}! Cómo hago para crear mi usuario?`,
-    n => `Holaaa ${n}! Me gustaría probar, cómo empiezo?`,
-    n => `Buenas ${n}! Me interesa, cómo funciona la plataforma?`,
-    n => `Hola ${n}! Me pasás info sobre cómo registrarme?`,
-    n => `Holaaa ${n}! Me contás más sobre lo que ofrecen?`,
-    n => `Buenas ${n}! Vi su anuncio, me explicás cómo participar?`,
-    n => `Hola ${n}! Vi este anuncio y quiero saber cómo funciona.`,
-    n => `Holaaa ${n}! Me podrías dar más información?`,
-    n => `Buenas ${n}! Estoy interesado, me pasás más detalles?`,
-    n => `Hola ${n}! Vi el anuncio y quiero saber cómo se juega.`,
-    n => `Holaaa ${n}! Vi la publi, me contás de qué trata?`,
-    n => `Buenas ${n}! Quiero saber más sobre el servicio que ofrecen.`,
-    n => `Hola ${n}! Podés darme más info sobre cómo arrancar?`,
-    n => `Holaaa ${n}! Me explicás cómo funciona el proceso?`,
-    n => `Buenas ${n}! Me interesa participar, me contás cómo es?`,
-    n => `Hola ${n}! Vi la publicidad, me das más detalles?`,
-    n => `Holaaa ${n}! Quisiera saber cómo puedo registrarme.`,
-    n => `Buenas ${n}! Vi el anuncio y quiero empezar, cómo hago?`,
-    n => `Hola ${n}! Estoy interesado en más información.`,
-    n => `Holaaa ${n}! Me contás cómo es el tema del registro?`,
-    n => `Buenas ${n}! Vi la publicación y me gustaría saber más.`,
-    n => `Hola ${n}! Me explicás cómo se gana o cómo funciona?`,
-    n => `Holaaa ${n}! Me gustaría saber más antes de registrarme.`,
-    n => `Buenas ${n}! Vi el anuncio y quiero info para empezar.`,
-    n => `Hola ${n}! Podés contarme cómo es el proceso paso a paso?`,
-    n => `Holaaa ${n}! Vi su publicidad, me gustaría más info.`,
-    n => `Buenas ${n}! Me interesa, tienen algún bono de registro?`,
-    n => `Hola ${n}! Cómo hago para jugar o participar?`,
-    n => `Holaaa ${n}! Me podés dar más info por favor?`,
-    n => `Buenas ${n}! Vi su anuncio, me gustaría probar.`,
-    n => `Hola ${n}! Vi la publicación y quiero saber más detalles.`,
-    n => `Holaaa ${n}! Me interesa lo que ofrecen, cómo empiezo?`
+    n => `Buenas ${n}! Me das información sobre cómo empezar?`
   ];
-
   const base = variantes[Math.floor(Math.random()*variantes.length)](botName || "Soporte");
   return promo_code ? `${base} ${promo_code}` : base;
 }
@@ -320,7 +286,6 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
   if (window.__waInFlight) return;
   window.__waInFlight = true;
 
-  // ✅ feedback inmediato (ganás tiempo percibido)
   showRedirectOverlay(CONFIG_FRONT.OVERLAY_TEXT);
 
   // 1) Conseguir lista rápido (máx deadline)
@@ -336,21 +301,19 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
       window.__activeNumbers = list || [];
     }
   } catch {
-    // fallback local final: cache local o soporte según flag
     const cached = getCache();
     const ok = cached?.numbers?.length && Date.now()-(cached.ts||0) < CONFIG_FRONT.TTL_MS;
     list = ok ? cached.numbers : (CONFIG_FRONT.SUPPORT_FALLBACK_ENABLED ? CONFIG_FRONT.FALLBACK : []);
   }
 
   if (!list.length) {
-    // soporte OFF + no cache + no upstream → caso extremo
     hideRedirectOverlay();
     window.__waInFlight = false;
     return;
   }
 
   const picked = pickWeightedRandom(list);
-  const cleanPhone = String(picked.number || "").replace("+","").trim();
+  const cleanPhone = String(picked.number || "").replace(/\D+/g,"").trim();
 
   const external_id = getOrCreateExternalId();
   const event_id = generateUUID();
@@ -368,20 +331,17 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
   // 2) Pixel (NO frena)
   try{
     if (window.fbq){
-      fbq(
-        "track",
-        "Contact",
+      fbq("track","Contact",
         { content_name:"Botón WhatsApp", content_category:"LeadGen", event_source:"LandingPage", source },
         { eventID: event_id }
       );
     }
   }catch{}
 
-  // 3) Sheets/CAPI: en paralelo (NO esperar geo)
+  // 3) Sheets/CAPI: en paralelo
   (async ()=>{
     try{
       const geo = await detectarGeo(700);
-
       const payload = {
         event_name:"Contact",
         event_id,
@@ -426,20 +386,17 @@ document.addEventListener("DOMContentLoaded",()=>{
   const btn = document.getElementById("whatsappButton");
   if(!btn) return;
 
-  // ✅ Precarga con promesa global (evita race condition del click rápido)
   window.__activeNumbers = [];
   window.__numbersPromise = loadNumbersOnce().then(list => {
     window.__activeNumbers = list || [];
     return window.__activeNumbers;
   });
 
-  // Botón grande
   btn.addEventListener("click",(e)=>{
     e.preventDefault();
     contactarWhatsApp({ source: "main_button" });
   });
 
-  // Floating + burbuja
   const floatBtn = document.getElementById("wa-float-btn");
   const bubble   = document.getElementById("wa-bubble");
   const closeBtn = document.getElementById("wa-bubble-close");
@@ -474,14 +431,10 @@ document.addEventListener("DOMContentLoaded",()=>{
     const KEY = "wa_auto_redirect_fired";
     const already = sessionStorage.getItem(KEY) === "1";
 
-    const ovBoot = document.getElementById("wa-redirect-overlay");
-    if (ovBoot) ovBoot.hidden = true;
-
     window.addEventListener("load", () => {
       setTimeout(async () => {
         if (already) return;
         if (window.__waInFlight) return;
-
         sessionStorage.setItem(KEY, "1");
 
         showRedirectOverlay(CONFIG_FRONT.AUTO_REDIRECT_TEXT || "Redirigiendo al Whatsapp del Cajero...");
@@ -491,22 +444,16 @@ document.addEventListener("DOMContentLoaded",()=>{
           list = (window.__activeNumbers && window.__activeNumbers.length)
             ? window.__activeNumbers
             : await loadNumbersOnce();
-        } catch (e) {
+        } catch {
           list = CONFIG_FRONT.SUPPORT_FALLBACK_ENABLED ? CONFIG_FRONT.FALLBACK : [];
         }
 
-        if (!list.length) {
-          hideRedirectOverlay();
-          return;
-        }
+        if (!list.length) { hideRedirectOverlay(); return; }
 
-        const picked = (list && list.length) ? pickWeightedRandom(list) : (CONFIG_FRONT.FALLBACK[0] || null);
-        if (!picked) { hideRedirectOverlay(); return; }
-
-        const cleanPhone = String(picked.number || "").replace("+", "").trim();
+        const picked = pickWeightedRandom(list);
+        const cleanPhone = String(picked.number || "").replace(/\D+/g,"").trim();
         const msg = encodeURIComponent(CONFIG_FRONT.AUTO_REDIRECT_TEXT || "Redirigiendo al Whatsapp del Cajero...");
         window.location.assign(`https://wa.me/${cleanPhone}?text=${msg}`);
-
       }, CONFIG_FRONT.AUTO_REDIRECT_DELAY_MS || 10000);
     });
   }
