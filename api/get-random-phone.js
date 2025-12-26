@@ -3,6 +3,31 @@
 // ✅ Plan A/B/C/D
 // ✅ Flag simple: SOLO ADS o ADS+NORMAL
 
+/**************************************************************
+ * ✅ CONFIG (EDITAR SOLO ESTO)
+ **************************************************************/
+const CONFIG = {
+  AGENCIES: [{ id: 17, name: "Geraldina" }],
+  BRAND_NAME: "Geraldina",
+
+  // 🔥 FLAG PRINCIPAL:
+  // true  => SOLO usa data.ads.whatsapp
+  // false => usa data.ads.whatsapp y si está vacío, usa data.whatsapp
+  ONLY_ADS_WHATSAPP: true,
+
+  // ✅ soporte controlado por flag
+  SUPPORT_FALLBACK_ENABLED: true, // ponelo false cuando ya estés seguro
+  SUPPORT_FALLBACK_NUMBER: "5491169789243",
+
+  // ✅ timeout / retries (prioridad: contacto)
+  TIMEOUT_MS: 2000,
+  MAX_RETRIES: 2,
+
+  // Upstream (API externa)
+  UPSTREAM_BASE: "https://api.asesadmin.com/api/v1",
+};
+/*************************************************************/
+
 let LAST_GOOD_NUMBER = null;
 let LAST_GOOD_META = null;
 
@@ -37,31 +62,14 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store, max-age=0");
   res.setHeader("Pragma", "no-cache");
 
+  const mode = String(req.query.mode || "normal").toLowerCase();
+
   try {
-    /************ CONFIG POR LANDING (EDITAR SOLO ESTO) ************/
-    const AGENCIES = [{ id: 17, name: "Geraldina" }];
-    const BRAND_NAME = "Geraldina";
-
-    // 🔥 FLAG PRINCIPAL:
-    // true  => SOLO usa data.ads.whatsapp
-    // false => usa data.ads.whatsapp y si está vacío, usa data.whatsapp
-    const ONLY_ADS_WHATSAPP = true;
-
-    // ✅ soporte controlado por flag
-    const SUPPORT_FALLBACK_ENABLED = true; // ponelo false cuando ya estés seguro
-    const SUPPORT_FALLBACK_NUMBER = "5491169789243";
-
-    // ✅ agresivo (prioridad: velocidad)
-    const TIMEOUT_MS = 1200;
-    const MAX_RETRIES = 2;
-    /**************************************************************/
-
-    const mode = String(req.query.mode || "normal").toLowerCase();
-
-    const agency = AGENCIES[Math.floor(Math.random() * AGENCIES.length)];
+    // 1️⃣ Elegimos agency al azar
+    const agency = CONFIG.AGENCIES[Math.floor(Math.random() * CONFIG.AGENCIES.length)];
     if (!agency?.id) throw new Error("No hay agencies configuradas");
 
-    const API_URL = `https://api.asesadmin.com/api/v1/agency/${agency.id}/random-contact`;
+    const API_URL = `${CONFIG.UPSTREAM_BASE}/agency/${agency.id}/random-contact`;
 
     // ============================================================
     // ✅ Plan A: llamar upstream con timeout + retries
@@ -69,9 +77,9 @@ export default async function handler(req, res) {
     let data = null;
     let lastFetchError = null;
 
-    for (let attempt = 1; attempt <= MAX_RETRIES && !data; attempt++) {
+    for (let attempt = 1; attempt <= CONFIG.MAX_RETRIES && !data; attempt++) {
       try {
-        data = await fetchJsonWithTimeout(API_URL, TIMEOUT_MS);
+        data = await fetchJsonWithTimeout(API_URL, CONFIG.TIMEOUT_MS);
       } catch (e) {
         lastFetchError = e;
       }
@@ -90,7 +98,7 @@ export default async function handler(req, res) {
     let rawPhone = null;
     let chosenSource = null;
 
-    if (ONLY_ADS_WHATSAPP) {
+    if (CONFIG.ONLY_ADS_WHATSAPP) {
       // 🚨 SOLO ADS
       if (!adsList.length) {
         throw new Error("ONLY_ADS_WHATSAPP activo y ads.whatsapp vacío");
@@ -121,23 +129,21 @@ export default async function handler(req, res) {
     LAST_GOOD_META = {
       agency_id: agency.id,
       source: chosenSource,
-      only_ads: ONLY_ADS_WHATSAPP,
+      only_ads: CONFIG.ONLY_ADS_WHATSAPP,
       ts: new Date().toISOString(),
     };
 
     return res.status(200).json({
       number: phone,
-      name: mode === "ads" ? `${BRAND_NAME}_ADS` : BRAND_NAME,
+      name: mode === "ads" ? `${CONFIG.BRAND_NAME}_ADS` : CONFIG.BRAND_NAME,
       weight: 1,
       mode,
       agency_id: agency.id,
       chosen_from: chosenSource,
-      only_ads: ONLY_ADS_WHATSAPP,
+      only_ads: CONFIG.ONLY_ADS_WHATSAPP,
       ms: Date.now() - startedAt,
     });
   } catch (err) {
-    const mode = String(req.query.mode || "normal").toLowerCase();
-
     // ============================================================
     // ✅ Plan C (respuesta): si existe “último bueno”, devolverlo
     // ============================================================
@@ -157,13 +163,9 @@ export default async function handler(req, res) {
     // ============================================================
     // ✅ Plan D: soporte SOLO si flag ON, si no -> 503 real
     // ============================================================
-    // (duplicados a propósito para que el catch sea auto-contenido)
-    const SUPPORT_FALLBACK_ENABLED = true;
-    const SUPPORT_FALLBACK_NUMBER = "5491169789243";
-
-    if (SUPPORT_FALLBACK_ENABLED) {
+    if (CONFIG.SUPPORT_FALLBACK_ENABLED) {
       return res.status(200).json({
-        number: SUPPORT_FALLBACK_NUMBER,
+        number: CONFIG.SUPPORT_FALLBACK_NUMBER,
         name: "SupportFallback",
         weight: 1,
         mode,
