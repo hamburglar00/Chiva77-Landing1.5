@@ -82,7 +82,7 @@
     </div>
   </div>
 
-  <!-- ✅ Overlay auto-redirect -->
+  <!-- ✅ Overlay (click / auto-redirect) -->
   <div id="wa-redirect-overlay" class="wa-redirect-overlay" hidden>
     <div class="wa-redirect-box">
       <div class="wa-redirect-spinner"></div>
@@ -103,6 +103,8 @@ const LANDING_CONFIG = {
   // Endpoint interno (Next/Vercel) que a su vez consulta asesadmin
   SERVICE_BASE: "/api/get-random-phone",
 
+  // ✅ Soporte (Plan D) controlado por flag (para test)
+  SUPPORT_FALLBACK_ENABLED: true, // <- cuando confirmes, pasalo a false
   FALLBACK: [{ number: "5491169789243", name: "Soporte Gera", weight: 1 }],
 
   CACHE: {
@@ -117,6 +119,8 @@ const LANDING_CONFIG = {
 
   UI: {
     DEFAULT_INPUT_TEXT: "Hola! Quiero info",
+    OVERLAY_TEXT: "Redirigiendo al Whatsapp del Cajero...",
+    CLICK_GET_NUMBER_DEADLINE_MS: 1500, // ✅ prioridad: conseguir número <= 1.5s
     AUTO_REDIRECT_ENABLED: false,
     AUTO_REDIRECT_DELAY_MS: 10000,
     AUTO_REDIRECT_TEXT: "Redirigiendo al Whatsapp del Cajero..."
@@ -129,10 +133,13 @@ const LANDING_CONFIG = {
 const CONFIG_FRONT = {
   SERVICE_URL: `${LANDING_CONFIG.SERVICE_BASE}?mode=${encodeURIComponent(LANDING_CONFIG.MODE)}`,
   FALLBACK: LANDING_CONFIG.FALLBACK,
+  SUPPORT_FALLBACK_ENABLED: LANDING_CONFIG.SUPPORT_FALLBACK_ENABLED === true,
   TTL_MS: LANDING_CONFIG.CACHE.TTL_MS,
   LS_KEY: LANDING_CONFIG.CACHE.LS_KEY,
   ENVIAR_PROMO_CODE: LANDING_CONFIG.PROMO.ENABLED,
   LANDING_TAG: LANDING_CONFIG.PROMO.LANDING_TAG,
+  OVERLAY_TEXT: LANDING_CONFIG.UI.OVERLAY_TEXT,
+  CLICK_GET_NUMBER_DEADLINE_MS: LANDING_CONFIG.UI.CLICK_GET_NUMBER_DEADLINE_MS,
   AUTO_REDIRECT_ENABLED: LANDING_CONFIG.UI.AUTO_REDIRECT_ENABLED,
   AUTO_REDIRECT_DELAY_MS: LANDING_CONFIG.UI.AUTO_REDIRECT_DELAY_MS,
   AUTO_REDIRECT_TEXT: LANDING_CONFIG.UI.AUTO_REDIRECT_TEXT
@@ -142,8 +149,28 @@ function fetchWithTimeout(url,opt={},ms=3000){
   const ctrl=new AbortController();const id=setTimeout(()=>ctrl.abort(),ms);
   return fetch(url,{...opt,signal:ctrl.signal}).finally(()=>clearTimeout(id));
 }
+
+function withTimeout(promise, ms){
+  return Promise.race([
+    promise,
+    new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))
+  ]);
+}
+
+function showRedirectOverlay(text){
+  const ov = document.getElementById("wa-redirect-overlay");
+  const tx = document.getElementById("wa-redirect-text");
+  if (tx) tx.textContent = text || CONFIG_FRONT.OVERLAY_TEXT || "Redirigiendo al Whatsapp del Cajero...";
+  if (ov) ov.hidden = false;
+}
+function hideRedirectOverlay(){
+  const ov = document.getElementById("wa-redirect-overlay");
+  if (ov) ov.hidden = true;
+}
+
 function getCache(){try{return JSON.parse(localStorage.getItem(CONFIG_FRONT.LS_KEY)||"null");}catch{return null;}}
 function setCache(numbers){localStorage.setItem(CONFIG_FRONT.LS_KEY,JSON.stringify({ts:Date.now(),numbers}));}
+
 function normalizeNumbers(list){
   return (Array.isArray(list)?list:[])
     .map(n=>({
@@ -153,20 +180,38 @@ function normalizeNumbers(list){
     }))
     .filter(n=>/^\+?\d{8,17}$/.test(n.number));
 }
+
+// ✅ Carga números (API) con fallback a cache local; soporte SOLO si flag ON
 async function loadNumbersOnce(){
-  const cached=getCache();
+  const cached = getCache();
+
   try{
-    const res=await fetchWithTimeout(CONFIG_FRONT.SERVICE_URL,{headers:{"Cache-Control":"no-store"}},2000);
-    if(!res.ok)throw new Error("HTTP "+res.status);
-    const data=await res.json();
-    const list=normalizeNumbers(Array.isArray(data)?data:[data]);
-    if(list.length){setCache(list);return list;}
+    // ✅ más agresivo (reduce “click sin número”)
+    const res = await fetchWithTimeout(
+      CONFIG_FRONT.SERVICE_URL,
+      { headers: { "Cache-Control":"no-store" } },
+      1500
+    );
+    if(!res.ok) throw new Error("HTTP "+res.status);
+
+    const data = await res.json();
+    const list = normalizeNumbers(Array.isArray(data)?data:[data]);
+
+    if(list.length){
+      setCache(list);
+      return list;
+    }
     throw new Error("Invalid data");
-  }catch(e){
-    const ok=cached?.numbers?.length && Date.now()-(cached.ts||0) < CONFIG_FRONT.TTL_MS;
-    return ok ? cached.numbers : CONFIG_FRONT.FALLBACK;
+  } catch(e){
+    // 1) cache local primero
+    const ok = cached?.numbers?.length && Date.now()-(cached.ts||0) < CONFIG_FRONT.TTL_MS;
+    if (ok) return cached.numbers;
+
+    // 2) soporte SOLO si flag está ON
+    return CONFIG_FRONT.SUPPORT_FALLBACK_ENABLED ? CONFIG_FRONT.FALLBACK : [];
   }
 }
+
 function pickWeightedRandom(list){
   const total=list.reduce((s,it)=>s+(Number(it.weight)||1),0);
   let r=Math.random()*total;
@@ -178,17 +223,37 @@ const qs=new URLSearchParams(location.search);
 const getQueryParam=p=>qs.get(p);
 const getCookie=name=>{const m=document.cookie.match(new RegExp("(^| )"+name+"=([^;]+)"));return m&&m[2];};
 
-function getFbc(){const c=getCookie("_fbc");if(c){localStorage.setItem("stored_fbc",c);return c;}
-  const s=localStorage.getItem("stored_fbc");if(s)return s;const fbclid=getQueryParam("fbclid");
-  if(!fbclid)return;const fbc=`fb.1.${Date.now()}.${fbclid}`;localStorage.setItem("stored_fbc",fbc);return fbc;}
-function getFbp(){const c=getCookie("_fbp");if(c){localStorage.setItem("stored_fbp",c);return c;}
-  const s=localStorage.getItem("stored_fbp");if(s)return s;const n=`fb.1.${Date.now()}.${Math.floor(Math.random()*1e10)}`;
-  localStorage.setItem("stored_fbp",n);return n;}
+function getFbc(){
+  const c=getCookie("_fbc");
+  if(c){localStorage.setItem("stored_fbc",c);return c;}
+  const s=localStorage.getItem("stored_fbc");if(s)return s;
+  const fbclid=getQueryParam("fbclid");if(!fbclid)return;
+  const fbc=`fb.1.${Date.now()}.${fbclid}`;localStorage.setItem("stored_fbc",fbc);return fbc;
+}
+function getFbp(){
+  const c=getCookie("_fbp");
+  if(c){localStorage.setItem("stored_fbp",c);return c;}
+  const s=localStorage.getItem("stored_fbp");if(s)return s;
+  const n=`fb.1.${Date.now()}.${Math.floor(Math.random()*1e10)}`;
+  localStorage.setItem("stored_fbp",n);return n;
+}
+
 function generateUUID(){return"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==="x"?r:r&0x3|0x8;return v.toString(16)})}
 function getDeviceType(){const ua=navigator.userAgent;if(/mobile/i.test(ua))return"mobile";if(/tablet|ipad|playbook|silk/i.test(ua))return"tablet";return"desktop";}
-async function detectarGeo(timeoutMs=700){try{const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),timeoutMs);
-  const res=await fetch("https://ipapi.co/json/",{signal:ctrl.signal,cache:"no-store"});clearTimeout(t);const d=await res.json();
-  return{country:d.country||null,region:d.region||null,city:d.city||null};}catch{return{country:null,region:null,city:null};}}
+
+// ⚠️ Geo: se usa SOLO para logging; NO debe frenar la redirección
+async function detectarGeo(timeoutMs=700){
+  try{
+    const ctrl=new AbortController();
+    const t=setTimeout(()=>ctrl.abort(),timeoutMs);
+    const res=await fetch("https://ipapi.co/json/",{signal:ctrl.signal,cache:"no-store"});
+    clearTimeout(t);
+    const d=await res.json();
+    return{country:d.country||null,region:d.region||null,city:d.city||null};
+  }catch{
+    return{country:null,region:null,city:null};
+  }
+}
 
 function buildMensaje(botName, promo_code){
   const variantes = [
@@ -247,15 +312,44 @@ function buildMensaje(botName, promo_code){
   return promo_code ? `${base} ${promo_code}` : base;
 }
 
+/**
+ * ✅ PRIORIDAD #1: conseguir número y redirigir
+ * ✅ PRIORIDAD #2: enviar data a Sheets/CAPI (en paralelo, sin frenar)
+ */
 async function contactarWhatsApp({ source="main_button", customText=null } = {}){
   if (window.__waInFlight) return;
   window.__waInFlight = true;
 
-  const activeNumbers = (window.__activeNumbers && window.__activeNumbers.length)
-    ? window.__activeNumbers
-    : CONFIG_FRONT.FALLBACK;
+  // ✅ feedback inmediato (ganás tiempo percibido)
+  showRedirectOverlay(CONFIG_FRONT.OVERLAY_TEXT);
 
-  const picked = activeNumbers.length ? pickWeightedRandom(activeNumbers) : CONFIG_FRONT.FALLBACK[0];
+  // 1) Conseguir lista rápido (máx deadline)
+  let list = [];
+  try {
+    if (window.__activeNumbers?.length) {
+      list = window.__activeNumbers;
+    } else {
+      list = await withTimeout(
+        (window.__numbersPromise || loadNumbersOnce()),
+        CONFIG_FRONT.CLICK_GET_NUMBER_DEADLINE_MS || 1500
+      );
+      window.__activeNumbers = list || [];
+    }
+  } catch {
+    // fallback local final: cache local o soporte según flag
+    const cached = getCache();
+    const ok = cached?.numbers?.length && Date.now()-(cached.ts||0) < CONFIG_FRONT.TTL_MS;
+    list = ok ? cached.numbers : (CONFIG_FRONT.SUPPORT_FALLBACK_ENABLED ? CONFIG_FRONT.FALLBACK : []);
+  }
+
+  if (!list.length) {
+    // soporte OFF + no cache + no upstream → caso extremo
+    hideRedirectOverlay();
+    window.__waInFlight = false;
+    return;
+  }
+
+  const picked = pickWeightedRandom(list);
   const cleanPhone = String(picked.number || "").replace("+","").trim();
 
   const external_id = getOrCreateExternalId();
@@ -271,70 +365,73 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
     ? (promo_code ? `${String(customText).trim()} ${promo_code}` : String(customText).trim())
     : buildMensaje(picked.name, promo_code);
 
-  // Pixel (dedup)
-  if (window.fbq){
-    fbq(
-      "track",
-      "Contact",
-      { content_name:"Botón WhatsApp", content_category:"LeadGen", event_source:"LandingPage", source },
-      { eventID: event_id }
-    );
-  }
-
-  // ✅ Backend / Sheets / CAPI (primero, para que no se corte por la redirección)
+  // 2) Pixel (NO frena)
   try{
-    const geo = await detectarGeo();
-    const payload = {
-      event_name:"Contact",
-      event_id,
-      external_id,
-      event_source_url,
-      fbp,
-      fbc,
-      email:getQueryParam("email"),
-      phone:getQueryParam("phone"),
-      fn:getQueryParam("fn"),
-      ln:getQueryParam("ln"),
-      ct:getQueryParam("ct"),
-      st:getQueryParam("st"),
-      zip:getQueryParam("zip"),
-      country:getQueryParam("country"),
-      geo_city:geo.city,
-      geo_region:geo.region,
-      geo_country:geo.country,
-      utm_campaign:getQueryParam("utm_campaign"),
-      telefono_asignado:cleanPhone,
-      device_type:getDeviceType(),
-      promo_code,
-      source,
-      brand: LANDING_CONFIG.BRAND_NAME,
-      mode: LANDING_CONFIG.MODE
-    };
+    if (window.fbq){
+      fbq(
+        "track",
+        "Contact",
+        { content_name:"Botón WhatsApp", content_category:"LeadGen", event_source:"LandingPage", source },
+        { eventID: event_id }
+      );
+    }
+  }catch{}
 
-    fetch("/api/xz3v2q",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(payload),
-      keepalive:true
-    }).catch(console.error);
+  // 3) Sheets/CAPI: en paralelo (NO esperar geo)
+  (async ()=>{
+    try{
+      const geo = await detectarGeo(700);
 
-  } finally {
-    // ✅ Redirección WA después (más compatible que window.open)
-    setTimeout(()=>{
-      window.location.href = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(mensaje)}`;
-    }, 200);
+      const payload = {
+        event_name:"Contact",
+        event_id,
+        external_id,
+        event_source_url,
+        fbp,
+        fbc,
+        email:getQueryParam("email"),
+        phone:getQueryParam("phone"),
+        fn:getQueryParam("fn"),
+        ln:getQueryParam("ln"),
+        ct:getQueryParam("ct"),
+        st:getQueryParam("st"),
+        zip:getQueryParam("zip"),
+        country:getQueryParam("country"),
+        geo_city:geo.city,
+        geo_region:geo.region,
+        geo_country:geo.country,
+        utm_campaign:getQueryParam("utm_campaign"),
+        telefono_asignado:cleanPhone,
+        device_type:getDeviceType(),
+        promo_code,
+        source,
+        brand: LANDING_CONFIG.BRAND_NAME,
+        mode: LANDING_CONFIG.MODE
+      };
 
-    setTimeout(()=>{ window.__waInFlight = false; }, 800);
-  }
+      fetch("/api/xz3v2q",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(payload),
+        keepalive:true
+      }).catch(()=>{});
+    }catch{}
+  })();
+
+  // 4) ✅ Redirección inmediata
+  window.location.href = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(mensaje)}`;
 }
 
 document.addEventListener("DOMContentLoaded",()=>{
   const btn = document.getElementById("whatsappButton");
   if(!btn) return;
 
-  // precarga números
+  // ✅ Precarga con promesa global (evita race condition del click rápido)
   window.__activeNumbers = [];
-  loadNumbersOnce().then(list => { window.__activeNumbers = list || []; });
+  window.__numbersPromise = loadNumbersOnce().then(list => {
+    window.__activeNumbers = list || [];
+    return window.__activeNumbers;
+  });
 
   // Botón grande
   btn.addEventListener("click",(e)=>{
@@ -387,10 +484,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 
         sessionStorage.setItem(KEY, "1");
 
-        const ov = document.getElementById("wa-redirect-overlay");
-        const tx = document.getElementById("wa-redirect-text");
-        if (tx) tx.textContent = CONFIG_FRONT.AUTO_REDIRECT_TEXT || "Redirigiendo al Whatsapp del Cajero...";
-        if (ov) ov.hidden = false;
+        showRedirectOverlay(CONFIG_FRONT.AUTO_REDIRECT_TEXT || "Redirigiendo al Whatsapp del Cajero...");
 
         let list = [];
         try {
@@ -398,12 +492,18 @@ document.addEventListener("DOMContentLoaded",()=>{
             ? window.__activeNumbers
             : await loadNumbersOnce();
         } catch (e) {
-          list = CONFIG_FRONT.FALLBACK;
+          list = CONFIG_FRONT.SUPPORT_FALLBACK_ENABLED ? CONFIG_FRONT.FALLBACK : [];
         }
 
-        const picked = (list && list.length) ? pickWeightedRandom(list) : CONFIG_FRONT.FALLBACK[0];
-        const cleanPhone = String(picked.number || "").replace("+", "").trim();
+        if (!list.length) {
+          hideRedirectOverlay();
+          return;
+        }
 
+        const picked = (list && list.length) ? pickWeightedRandom(list) : (CONFIG_FRONT.FALLBACK[0] || null);
+        if (!picked) { hideRedirectOverlay(); return; }
+
+        const cleanPhone = String(picked.number || "").replace("+", "").trim();
         const msg = encodeURIComponent(CONFIG_FRONT.AUTO_REDIRECT_TEXT || "Redirigiendo al Whatsapp del Cajero...");
         window.location.assign(`https://wa.me/${cleanPhone}?text=${msg}`);
 
