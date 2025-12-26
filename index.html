@@ -125,6 +125,13 @@ const LANDING_CONFIG = {
     AUTO_REDIRECT_ENABLED: false,
     AUTO_REDIRECT_DELAY_MS: 10000,
     AUTO_REDIRECT_TEXT: "Redirigiendo al Whatsapp del Cajero..."
+  },
+
+  // ✅ GEO (FRONTEND): ahora vuelve a ser la fuente de verdad
+  GEO: {
+    ENABLED: true,
+    PROVIDER_URL: "https://ipapi.co/json/",
+    TIMEOUT_MS: 900 // ajustá: 700–1200 suele ir bien
   }
 };
 
@@ -157,6 +164,8 @@ function withTimeout(promise, ms){
     new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))
   ]);
 }
+
+function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
 
 function showRedirectOverlay(text){
   const ov = document.getElementById("wa-redirect-overlay");
@@ -249,6 +258,37 @@ function getFbp(){
 function generateUUID(){return"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==="x"?r:r&0x3|0x8;return v.toString(16)})}
 function getDeviceType(){const ua=navigator.userAgent;if(/mobile/i.test(ua))return"mobile";if(/tablet|ipad|playbook|silk/i.test(ua))return"tablet";return"desktop";}
 
+// ✅ GEO (FRONTEND): rápido, con timeout, y si falla -> nulls
+async function detectarGeo(){
+  if (!LANDING_CONFIG.GEO?.ENABLED) {
+    return { city:null, region:null, country:null };
+  }
+  const timeoutMs = Number(LANDING_CONFIG.GEO.TIMEOUT_MS || 900);
+
+  try{
+    const ctrl=new AbortController();
+    const t=setTimeout(()=>ctrl.abort(),timeoutMs);
+
+    const res = await fetch(LANDING_CONFIG.GEO.PROVIDER_URL, {
+      signal: ctrl.signal,
+      cache:"no-store"
+    });
+
+    clearTimeout(t);
+
+    if (!res.ok) throw new Error("geo_http_" + res.status);
+
+    const d = await res.json();
+    return {
+      city: d.city || null,
+      region: d.region || d.region_code || null,
+      country: d.country || d.country_code || null
+    };
+  }catch{
+    return { city:null, region:null, country:null };
+  }
+}
+
 function buildMensaje(botName, promo_code){
   const variantes = [
     n => `Hola ${n}! Vi este anuncio, me pasás info?`,
@@ -267,9 +307,10 @@ function buildMensaje(botName, promo_code){
 }
 
 /**
- * ✅ PRIORIDAD #1: conseguir número y redirigir
- * ✅ PRIORIDAD #2: enviar data a Sheets (en paralelo, sin frenar)
- * ✅ GEO: ahora la completa el BACKEND (más confiable)
+ * ✅ PRIORIDAD #1: conseguir número
+ * ✅ PRIORIDAD #2: pixel contact
+ * ✅ PRIORIDAD #3: GEO FRONT + POST a tu API (con tiempo controlado)
+ * ✅ PRIORIDAD #4: redirigir a WhatsApp
  */
 async function contactarWhatsApp({ source="main_button", customText=null } = {}){
   if (window.__waInFlight) return;
@@ -327,48 +368,55 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
     }
   }catch{}
 
-  // 3) Sheets: en paralelo (NO geo acá; la completa backend)
-  (async ()=>{
-    try{
-      const payload = {
-        event_name:"Contact",
-        event_id,
-        external_id,
-        event_source_url,
-        fbp,
-        fbc,
-        email:getQueryParam("email"),
-        phone:getQueryParam("phone"),
-        fn:getQueryParam("fn"),
-        ln:getQueryParam("ln"),
-        ct:getQueryParam("ct"),
-        st:getQueryParam("st"),
-        zip:getQueryParam("zip"),
-        country:getQueryParam("country"),
-        utm_campaign:getQueryParam("utm_campaign"),
-        telefono_asignado:cleanPhone,
-        device_type:getDeviceType(),
-        promo_code,
-        source,
-        brand: LANDING_CONFIG.BRAND_NAME,
-        mode: LANDING_CONFIG.MODE,
+  // 3) GEO FRONT (espera corta) + POST a Sheets (antes de redirigir)
+  let geo = { city:null, region:null, country:null };
+  try{
+    geo = await detectarGeo();
+  }catch{}
 
-        // ✅ dejamos en blanco: backend lo completa con geo por IP
-        geo_city: "",
-        geo_region: "",
-        geo_country: ""
-      };
+  const payload = {
+    event_name:"Contact",
+    event_id,
+    external_id,
+    event_source_url,
+    fbp,
+    fbc,
+    email:getQueryParam("email"),
+    phone:getQueryParam("phone"),
+    fn:getQueryParam("fn"),
+    ln:getQueryParam("ln"),
+    ct:getQueryParam("ct"),
+    st:getQueryParam("st"),
+    zip:getQueryParam("zip"),
+    country:getQueryParam("country"),
+    utm_campaign:getQueryParam("utm_campaign"),
+    telefono_asignado:cleanPhone,
+    device_type:getDeviceType(),
+    promo_code,
+    source,
+    brand: LANDING_CONFIG.BRAND_NAME,
+    mode: LANDING_CONFIG.MODE,
 
-      fetch("/api/xz3v2q",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify(payload),
-        keepalive:true
-      }).catch(()=>{});
-    }catch{}
-  })();
+    // ✅ geo correcta desde frontend
+    geo_city: geo.city || "",
+    geo_region: geo.region || "",
+    geo_country: geo.country || ""
+  };
 
-  // 4) ✅ Redirección inmediata
+  // Enviamos SIN trabarnos mucho tiempo. (Le damos una chance real de salir)
+  try{
+    const p = fetch("/api/xz3v2q",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(payload),
+      keepalive:true
+    });
+
+    // Le damos una ventanita corta para “salir”, pero no bloqueamos infinito.
+    await Promise.race([p, delay(400)]);
+  }catch{}
+
+  // 4) ✅ Redirección
   window.location.href = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(mensaje)}`;
 }
 
