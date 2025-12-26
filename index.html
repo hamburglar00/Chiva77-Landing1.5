@@ -43,8 +43,10 @@
   <div class="container background-image">
     <div class="overlay"></div>
     <div class="content">
+      <!-- ✅ Tamaño del logo: SOLO CSS (sin width/height) -->
       <img src="imagenes/logo.png" class="logo" alt="Logo GERAGANAMOS"
-           width="240" height="120" decoding="async" fetchpriority="high" />
+           decoding="async" fetchpriority="high" />
+
       <p class="title">Envianos un WhatsApp<br />para crear tu cuenta</p>
 
       <a class="whatsapp-button" id="whatsappButton" href="#" rel="noopener noreferrer" aria-label="Crear usuario por WhatsApp">
@@ -247,20 +249,6 @@ function getFbp(){
 function generateUUID(){return"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==="x"?r:r&0x3|0x8;return v.toString(16)})}
 function getDeviceType(){const ua=navigator.userAgent;if(/mobile/i.test(ua))return"mobile";if(/tablet|ipad|playbook|silk/i.test(ua))return"tablet";return"desktop";}
 
-// ⚠️ Geo: se usa SOLO para logging; NO debe frenar la redirección
-async function detectarGeo(timeoutMs=700){
-  try{
-    const ctrl=new AbortController();
-    const t=setTimeout(()=>ctrl.abort(),timeoutMs);
-    const res=await fetch("https://ipapi.co/json/",{signal:ctrl.signal,cache:"no-store"});
-    clearTimeout(t);
-    const d=await res.json();
-    return{country:d.country||null,region:d.region||null,city:d.city||null};
-  }catch{
-    return{country:null,region:null,city:null};
-  }
-}
-
 function buildMensaje(botName, promo_code){
   const variantes = [
     n => `Hola ${n}! Vi este anuncio, me pasás info?`,
@@ -280,7 +268,8 @@ function buildMensaje(botName, promo_code){
 
 /**
  * ✅ PRIORIDAD #1: conseguir número y redirigir
- * ✅ PRIORIDAD #2: enviar data a Sheets/CAPI (en paralelo, sin frenar)
+ * ✅ PRIORIDAD #2: enviar data a Sheets (en paralelo, sin frenar)
+ * ✅ GEO: ahora la completa el BACKEND (más confiable)
  */
 async function contactarWhatsApp({ source="main_button", customText=null } = {}){
   if (window.__waInFlight) return;
@@ -338,10 +327,9 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
     }
   }catch{}
 
-  // 3) Sheets/CAPI: en paralelo
+  // 3) Sheets: en paralelo (NO geo acá; la completa backend)
   (async ()=>{
     try{
-      const geo = await detectarGeo(700);
       const payload = {
         event_name:"Contact",
         event_id,
@@ -357,16 +345,18 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
         st:getQueryParam("st"),
         zip:getQueryParam("zip"),
         country:getQueryParam("country"),
-        geo_city:geo.city,
-        geo_region:geo.region,
-        geo_country:geo.country,
         utm_campaign:getQueryParam("utm_campaign"),
         telefono_asignado:cleanPhone,
         device_type:getDeviceType(),
         promo_code,
         source,
         brand: LANDING_CONFIG.BRAND_NAME,
-        mode: LANDING_CONFIG.MODE
+        mode: LANDING_CONFIG.MODE,
+
+        // ✅ dejamos en blanco: backend lo completa con geo por IP
+        geo_city: "",
+        geo_region: "",
+        geo_country: ""
       };
 
       fetch("/api/xz3v2q",{
