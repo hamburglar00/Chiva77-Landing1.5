@@ -117,6 +117,9 @@ const LANDING_CONFIG = {
     OVERLAY_TEXT: "Redirigiendo al Whatsapp del Cajero...",
     CLICK_GET_NUMBER_DEADLINE_MS: 3500,
 
+    // ✅ Overlay máximo visible
+    OVERLAY_MAX_VISIBLE_MS: 5000,
+
     AUTO_REDIRECT_ENABLED: false,
     AUTO_REDIRECT_DELAY_MS: 10000,
     AUTO_REDIRECT_TEXT: "Redirigiendo al Whatsapp del Cajero..."
@@ -139,15 +142,25 @@ function fetchWithTimeout(url,opt={},ms=3000){
 }
 function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
 
+// ✅ Overlay: auto-hide a los 5s (no puede quedar pegado)
+let __overlayTimer = null;
+
 function showRedirectOverlay(text){
   const ov = document.getElementById("wa-redirect-overlay");
   const tx = document.getElementById("wa-redirect-text");
   if (tx) tx.textContent = text || LANDING_CONFIG.UI.OVERLAY_TEXT || "Redirigiendo al Whatsapp del Cajero...";
   if (ov) ov.hidden = false;
+
+  if (__overlayTimer) clearTimeout(__overlayTimer);
+  __overlayTimer = setTimeout(() => {
+    hideRedirectOverlay();
+  }, Number(LANDING_CONFIG.UI.OVERLAY_MAX_VISIBLE_MS || 5000));
 }
+
 function hideRedirectOverlay(){
   const ov = document.getElementById("wa-redirect-overlay");
   if (ov) ov.hidden = true;
+  if (__overlayTimer) { clearTimeout(__overlayTimer); __overlayTimer = null; }
 }
 
 function normalizePhoneDigits(raw){
@@ -254,7 +267,6 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
   try {
     picked = await getNumberFromApi();
   } catch(e) {
-    // ✅ Emergencia total: solo si tu API no respondió
     picked = {
       number: LANDING_CONFIG.EMERGENCY_FALLBACK_NUMBER,
       name: LANDING_CONFIG.EMERGENCY_FALLBACK_NAME,
@@ -319,7 +331,6 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
     geo_region: geo.region || "",
     geo_country: geo.country || "",
 
-    // Opcional: debug de la API (si querés guardarlo)
     api_meta: picked.meta || null
   };
 
@@ -332,6 +343,10 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
     });
     await Promise.race([p, delay(400)]);
   }catch{}
+
+  // ✅ Si por algún motivo no redirige, que el usuario no quede bloqueado
+  // (igual se auto-oculta a los 5s por el timer)
+  // hideRedirectOverlay();
 
   // 4) Redirección
   window.location.href = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(mensaje)}`;
