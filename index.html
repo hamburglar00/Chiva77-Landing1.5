@@ -10,7 +10,8 @@
   <!-- Performance -->
   <link rel="preconnect" href="https://connect.facebook.net" crossorigin>
   <link rel="dns-prefetch" href="//connect.facebook.net">
-  <link rel="preload" href="imagenes/fondo.png" as="image">
+  <link rel="preload" as="image" href="imagenes/fondo.avif" type="image/avif">
+  <link rel="preload" as="image" href="imagenes/fondo.png">
 
   <!-- Meta Pixel Code (con coincidencias avanzadas) -->
   <script>
@@ -43,8 +44,14 @@
   <div class="container background-image">
     <div class="overlay"></div>
     <div class="content">
-      <img src="imagenes/logo.png" class="logo" alt="Logo GERAGANAMOS"
-           decoding="async" fetchpriority="high" />
+      <picture>
+        <source srcset="imagenes/logo.avif" type="image/avif">
+        <img src="imagenes/logo.png"
+             class="logo"
+             alt="Logo GERAGANAMOS"
+             decoding="async"
+             fetchpriority="high" />
+      </picture>
 
       <p class="title">Envianos un WhatsApp<br />para crear tu cuenta</p>
 
