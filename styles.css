@@ -24,9 +24,16 @@ body{
   align-items:center;
   justify-content:center;
   position:relative;
-  /* perf */
   contain: paint;
 }
+
+/* ✅ Si soporta AVIF, usa AVIF */
+@supports (background-image: url("imagenes/fondo.avif")) {
+  .background-image{
+    background:#000 url("imagenes/fondo.avif") center / cover no-repeat;
+  }
+}
+
 
 .overlay{
   position:absolute;
