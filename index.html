@@ -109,7 +109,8 @@ const LANDING_CONFIG = {
   UI: {
     DEFAULT_INPUT_TEXT: "Hola! Quiero info",
     OVERLAY_TEXT: "Abriendo WhatsApp...",
-    OVERLAY_MAX_VISIBLE_MS: 3500,
+    OVERLAY_MAX_VISIBLE_MS: 500,
+    AUTO_OPEN_BUBBLE_MS: 5000,
     // si el número ya está “prewarm”, no se usa; si no, este timeout limita espera
     CLICK_GET_NUMBER_DEADLINE_MS: 2000
   },
@@ -351,7 +352,11 @@ document.addEventListener("DOMContentLoaded",()=>{
   function closeBubble(){ if(bubble){ bubble.classList.remove("is-open"); } }
   function toggleBubble(){ if(bubble){ bubble.classList.toggle("is-open"); openedOnce=true; } }
 
-  window.addEventListener("load", ()=>{ setTimeout(()=>{ if(!openedOnce) openBubble(); }, 3500); });
+  window.addEventListener("load", ()=>{
+    setTimeout(()=>{ if(!openedOnce) openBubble(); },
+      Number(LANDING_CONFIG.UI.AUTO_OPEN_BUBBLE_MS || 3500)
+    );
+  });
 
   if(floatBtn) floatBtn.addEventListener("click", toggleBubble);
   if(closeBtn) closeBtn.addEventListener("click", closeBubble);
