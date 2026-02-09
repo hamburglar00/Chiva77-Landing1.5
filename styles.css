@@ -63,8 +63,8 @@ body{
    ========================== */
 .logo{
   /* base mobile */
-  width: 200px;
-  height: 200px;         /* ✅ fuerza 1:1 */
+  width: 205px;
+  height: 205px;         /* ✅ fuerza 1:1 */
   object-fit: contain;   /* ✅ no deforma */
   display: block;
 }
