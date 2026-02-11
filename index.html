@@ -1,382 +1,139 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GERALDINA</title>
-  <link rel="icon" href="imagenes/favicon.png" type="image/png" />
-  <link rel="stylesheet" href="./styles.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GERALDINA</title>
 
-  <!-- Performance -->
-  <link rel="preconnect" href="https://connect.facebook.net" crossorigin>
-  <link rel="dns-prefetch" href="//connect.facebook.net">
-  
-  <link rel="preload" as="image" href="imagenes/fondo.avif" type="image/avif" fetchpriority="high">
-  <link rel="preload" as="image" href="imagenes/fondo.png">
-  
-  <!-- Meta Pixel Code (con coincidencias avanzadas) -->
-  <script>
-    function normEmail(v){return(v||"").trim().toLowerCase();}
-    function normPhone(v){let p=(v||"").replace(/\D+/g,"");if(p&&p.length===10)p="54"+p;return p;}
-    function safeUUID(){return crypto?.randomUUID?.()||"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==="x"?r:r&0x3|0x8;return v.toString(16)})}
-    function getOrCreateExternalId(){let id=localStorage.getItem("external_id");if(!id){id=safeUUID();localStorage.setItem("external_id",id);}return id;}
+<link rel="icon" href="imagenes/favicon.png" type="image/png" />
+<link rel="stylesheet" href="./styles.css" />
 
-    const params=new URLSearchParams(location.search);
-    const userEmail=normEmail(params.get("email"));
-    const userPhone=normPhone(params.get("phone"));
-    const externalId=getOrCreateExternalId();
+<link rel="preconnect" href="https://connect.facebook.net" crossorigin>
+<link rel="dns-prefetch" href="//connect.facebook.net">
+<link rel="preload" as="image" href="imagenes/fondo.avif" type="image/avif" fetchpriority="high">
+<link rel="preload" as="image" href="imagenes/fondo.png">
 
-    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
+<script>
+function normEmail(v){return(v||"").trim().toLowerCase();}
+function normPhone(v){let p=(v||"").replace(/\D+/g,"");if(p&&p.length===10)p="54"+p;return p;}
+function safeUUID(){return crypto?.randomUUID?.()||"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==="x"?r:r&0x3|0x8;return v.toString(16)})}
+function getOrCreateExternalId(){let id=localStorage.getItem("external_id");if(!id){id=safeUUID();localStorage.setItem("external_id",id);}return id;}
 
-    window.fbq=window.fbq||function(){};
+const params=new URLSearchParams(location.search);
+const userEmail=normEmail(params.get("email"));
+const userPhone=normPhone(params.get("phone"));
+const externalId=getOrCreateExternalId();
 
-    fbq("init","1849164609062818",{external_id:externalId,em:userEmail||void 0,ph:userPhone||void 0,country:"AR"});
-    fbq("track","PageView");
-  </script>
-  <noscript><img height="1" width="1" style="display:none"
-    src="https://www.facebook.com/tr?id=1849164609062818&ev=PageView&noscript=1"/></noscript>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
+(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+
+fbq("init","1849164609062818",{external_id:externalId,em:userEmail||void 0,ph:userPhone||void 0,country:"AR"});
+fbq("track","PageView");
+</script>
+
+<noscript>
+<img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1849164609062818&ev=PageView&noscript=1"/>
+</noscript>
 </head>
 
 <body>
-  <div class="container background-image">
-    <div class="overlay"></div>
-    <div class="content">
-      <img src="imagenes/logo.png" class="logo" alt="Logo" decoding="async" fetchpriority="high" />
+<div class="container background-image">
+<div class="overlay"></div>
+<div class="content">
 
-      <p class="title">Envianos un WhatsApp<br />para crear tu cuenta</p>
+<img src="imagenes/logo.png" class="logo" alt="Logo" decoding="async" fetchpriority="high" />
 
-      <a class="whatsapp-button" id="whatsappButton" href="#" rel="noopener noreferrer" aria-label="Crear usuario por WhatsApp">
-        <span>¡Contactar ya!</span>
-        <img src="imagenes/whatsapp.png" alt="whatsapp" class="whatsapp-icon"
-             width="24" height="24" decoding="async" loading="lazy" />
-      </a>
+<p class="title">
+Envianos un WhatsApp<br />para crear tu cuenta
+</p>
 
-      <p class="subtitle">Mínimo de carga: 1.000<br />Sin Límite de retiro<br />Ganás y cobrás a cualquier hora</p>
-      <p class="description">-RED OFICIAL-</p>
-    </div>
-  </div>
+<a class="whatsapp-button" id="whatsappButton" href="#" rel="noopener noreferrer">
+<span>¡Contactar ya!</span>
+<img src="imagenes/whatsapp.png" alt="whatsapp" class="whatsapp-icon"
+width="24" height="24" decoding="async" loading="lazy" />
+</a>
 
-  <!-- Floating WhatsApp + Burbuja -->
-  <div id="wa-float" class="wa-float" aria-hidden="false">
-    <button id="wa-float-btn" class="wa-float__btn" aria-label="Abrir WhatsApp">
-      <img src="imagenes/whatsapp.png" alt="whatsapp" class="wa-float__icon" />
-    </button>
+<p class="subtitle">
+Mínimo de carga: 1.000<br />
+Sin Límite de retiro<br />
+Ganás y cobrás a cualquier hora
+</p>
 
-    <div id="wa-bubble" class="wa-bubble" role="dialog" aria-label="Chat WhatsApp">
-      <div class="wa-bubble__header">
-        <div class="wa-bubble__title">WhatsApp</div>
-        <button id="wa-bubble-close" class="wa-bubble__close" aria-label="Cerrar">✕</button>
-      </div>
+<p class="description">-RED OFICIAL-</p>
 
-      <div class="wa-bubble__body">
-        <div class="wa-msg wa-msg--bot">¡Bienvenido!👋 Enviale un mensaje a nuestra cajera👇</div>
-      </div>
-
-      <div class="wa-bubble__footer">
-        <input id="wa-input" class="wa-input" type="text" value="Hola! Quiero info" />
-        <button id="wa-send" class="wa-send">Enviar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Overlay (se muestra y auto-oculta) -->
-  <div id="wa-redirect-overlay" class="wa-redirect-overlay" hidden>
-    <div class="wa-redirect-box">
-      <div class="wa-redirect-spinner"></div>
-      <div id="wa-redirect-text" class="wa-redirect-text">Abriendo WhatsApp...</div>
-    </div>
-  </div>
+</div>
+</div>
 
 <script>
-/************************************************************
- * ✅ CONFIG (editás solo esto)
- ************************************************************/
 const LANDING_CONFIG = {
-  BRAND_NAME: "",
-  MODE: "ads", // "ads" | "normal"
+  MODE: "ads",
   SERVICE_BASE: "/api/get-random-phone",
-
-  // Fallback extremo si todo falla (opcional)
-  EMERGENCY_FALLBACK_NUMBER: "",
-  EMERGENCY_FALLBACK_NAME: "",
-
-  PROMO: { ENABLED: true, LANDING_TAG: "CH1" },
-
-  UI: {
-    DEFAULT_INPUT_TEXT: "Hola! Quiero info",
-    OVERLAY_TEXT: "Abriendo WhatsApp...",
-    OVERLAY_MAX_VISIBLE_MS: 500,
-    AUTO_OPEN_BUBBLE_MS: 5000,
-    // si el número ya está “prewarm”, no se usa; si no, este timeout limita espera
-    CLICK_GET_NUMBER_DEADLINE_MS: 2000
-  },
-
-  // tracking AFTER click (no bloquea redirect)
-  GEO: { ENABLED: true, PROVIDER_URL: "https://ipapi.co/json/", TIMEOUT_MS: 900 }
+  PROMO: { ENABLED: true, LANDING_TAG: "CH1" }
 };
 
-/************************************************************
- * ✅ helpers
- ************************************************************/
-function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
-function fetchWithTimeout(url,opt={},ms=3000){
-  const ctrl=new AbortController();const id=setTimeout(()=>ctrl.abort(),ms);
-  return fetch(url,{...opt,signal:ctrl.signal}).finally(()=>clearTimeout(id));
-}
-function normalizePhoneDigits(raw){ return String(raw||"").replace(/\D+/g,"").trim(); }
-function generateUUID(){return"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==="x"?r:r&0x3|0x8;return v.toString(16)})}
-function getDeviceType(){const ua=navigator.userAgent;if(/mobile/i.test(ua))return"mobile";if(/tablet|ipad|playbook|silk/i.test(ua))return"tablet";return"desktop";}
-
-const qs=new URLSearchParams(location.search);
-const getQueryParam=p=>qs.get(p);
-const getCookie=name=>{const m=document.cookie.match(new RegExp("(^| )"+name+"=([^;]+)"));return m&&m[2];};
-
-function getFbc(){
-  const c=getCookie("_fbc");
-  if(c){localStorage.setItem("stored_fbc",c);return c;}
-  const s=localStorage.getItem("stored_fbc");if(s)return s;
-  const fbclid=getQueryParam("fbclid");if(!fbclid)return;
-  const fbc=`fb.1.${Date.now()}.${fbclid}`;localStorage.setItem("stored_fbc",fbc);return fbc;
-}
-function getFbp(){
-  const c=getCookie("_fbp");
-  if(c){localStorage.setItem("stored_fbp",c);return c;}
-  const s=localStorage.getItem("stored_fbp");if(s)return s;
-  const n=`fb.1.${Date.now()}.${Math.floor(Math.random()*1e10)}`;
-  localStorage.setItem("stored_fbp",n);return n;
-}
-function safeUUID(){return crypto?.randomUUID?.()||generateUUID();}
-function getOrCreateExternalId(){
-  let id=localStorage.getItem("external_id");
-  if(!id){id=safeUUID();localStorage.setItem("external_id",id);}
-  return id;
+function normalizePhoneDigits(raw){
+  return String(raw||"").replace(/\D+/g,"").trim();
 }
 
-/************************************************************
- * ✅ Overlay
- ************************************************************/
-let __overlayTimer = null;
-function showRedirectOverlay(text){
-  const ov=document.getElementById("wa-redirect-overlay");
-  const tx=document.getElementById("wa-redirect-text");
-  if(tx) tx.textContent=text || LANDING_CONFIG.UI.OVERLAY_TEXT || "Abriendo WhatsApp...";
-  if(ov) ov.hidden=false;
-
-  if(__overlayTimer) clearTimeout(__overlayTimer);
-  __overlayTimer=setTimeout(()=>hideRedirectOverlay(), Number(LANDING_CONFIG.UI.OVERLAY_MAX_VISIBLE_MS||3500));
+function generateUUID(){
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{
+    const r=Math.random()*16|0,v=c==="x"?r:r&0x3|0x8;
+    return v.toString(16);
+  });
 }
-function hideRedirectOverlay(){
-  const ov=document.getElementById("wa-redirect-overlay");
-  if(ov) ov.hidden=true;
-  if(__overlayTimer){ clearTimeout(__overlayTimer); __overlayTimer=null; }
-}
-
-/************************************************************
- * ✅ GEO (no bloquea)
- ************************************************************/
-async function detectarGeo(){
-  if(!LANDING_CONFIG.GEO?.ENABLED) return { city:null, region:null, country:null };
-  const timeoutMs=Number(LANDING_CONFIG.GEO.TIMEOUT_MS||900);
-  try{
-    const ctrl=new AbortController();
-    const t=setTimeout(()=>ctrl.abort(),timeoutMs);
-    const res=await fetch(LANDING_CONFIG.GEO.PROVIDER_URL,{signal:ctrl.signal,cache:"no-store"});
-    clearTimeout(t);
-    if(!res.ok) throw 0;
-    const d=await res.json();
-    return { city:d.city||null, region:d.region||d.region_code||null, country:d.country||d.country_code||null };
-  }catch{
-    return { city:null, region:null, country:null };
-  }
-}
-
-/************************************************************
- * ✅ Mensaje (promo al final)
- ************************************************************/
-function buildMensaje(promo_code, botName){
-  // si querés SIN nombre, dejá botName sin usar o pasale ""
-  const variantes = [
-    n => `Hola! Vi este anuncio, me pasás info?`,
-    n => `Hola! Vi el anuncio, podrías darme más info?`,
-    n => `Buenas! Me contás un poco más del anuncio?`,
-    n => `Hola! Quisiera saber más sobre lo que ofrecen.`,
-    n => `Buenas! Me das más detalles por favor?`,
-    n => `Hola! Estoy interesado, me contás cómo funciona?`,
-    n => `Hola! Vi tu publicación, podrías ampliarme la info?`,
-    n => `Holaaa! Me llamó la atención el anuncio, me contás más?`,
-    n => `Hola! Vi tu publicidad, cómo es para registrarse?`,
-    n => `Buenas! Me das información sobre cómo empezar?`
-  ];
-  const base = variantes[Math.floor(Math.random()*variantes.length)](botName || "Soporte");
-  return promo_code ? `${base} ${promo_code}` : base;
-}
-
-/************************************************************
- * ✅ API número (PREWARM)
- ************************************************************/
-let __pickedPromise = null;
 
 async function getNumberFromApi(){
-  const url = `${LANDING_CONFIG.SERVICE_BASE}?mode=${encodeURIComponent(LANDING_CONFIG.MODE)}`;
-  const res = await fetchWithTimeout(url, { headers:{ "Cache-Control":"no-store" } },
-    Number(LANDING_CONFIG.UI.CLICK_GET_NUMBER_DEADLINE_MS||2000)
-  );
-  if(!res.ok) throw new Error("HTTP "+res.status);
+  const res = await fetch(`${LANDING_CONFIG.SERVICE_BASE}?mode=${LANDING_CONFIG.MODE}`,{cache:"no-store"});
+  if(!res.ok) throw new Error("API error");
   const data = await res.json();
-
-  const number = normalizePhoneDigits(data?.number);
-  if(!/^\d{8,17}$/.test(number)) throw new Error("Invalid number");
-  return { number, name: data?.name || LANDING_CONFIG.BRAND_NAME, meta: data };
+  return normalizePhoneDigits(data?.number);
 }
 
-function prewarmNumber(){
-  if(!__pickedPromise) __pickedPromise = getNumberFromApi();
-  return __pickedPromise;
-}
+async function contactarWhatsApp(){
+  if(window.__waInFlight) return;
+  window.__waInFlight=true;
 
-/************************************************************
- * ✅ CLICK: redirect ASAP, tracking after (no await)
- ************************************************************/
-async function contactarWhatsApp({ source="main_button", customText=null } = {}){
-  if (window.__waInFlight) return;
-  window.__waInFlight = true;
-
-  showRedirectOverlay(LANDING_CONFIG.UI.OVERLAY_TEXT);
-
-  // 1) número (usa prewarm)
-  let picked;
+  let phone;
   try{
-    picked = await (__pickedPromise || prewarmNumber());
-  }catch(e){
-    picked = {
-      number: LANDING_CONFIG.EMERGENCY_FALLBACK_NUMBER,
-      name: LANDING_CONFIG.EMERGENCY_FALLBACK_NAME,
-      meta: { emergency:true, error:String(e?.message||e) }
-    };
-  }
-
-  const cleanPhone = normalizePhoneDigits(picked?.number);
-  if(!/^\d{8,17}$/.test(cleanPhone)){
-    hideRedirectOverlay();
-    window.__waInFlight = false;
+    phone = await getNumberFromApi();
+  }catch{
+    window.__waInFlight=false;
     return;
   }
 
-  // promo
-  const uuidSegment = generateUUID().replace(/-/g,"").slice(0,12);
-  const promo_code = LANDING_CONFIG.PROMO.ENABLED ? `${LANDING_CONFIG.PROMO.LANDING_TAG}-${uuidSegment}` : "";
+  if(!phone){
+    window.__waInFlight=false;
+    return;
+  }
 
-  const mensaje = (customText && String(customText).trim())
-    ? (promo_code ? `${String(customText).trim()} ${promo_code}` : String(customText).trim())
-    : buildMensaje(promo_code, picked?.name);
+  const promo_code = LANDING_CONFIG.PROMO.ENABLED
+    ? `${LANDING_CONFIG.PROMO.LANDING_TAG}-${generateUUID().slice(0,8)}`
+    : "";
 
-  // 2) Pixel (no bloquea)
+  const mensaje = `Hola! Quiero info ${promo_code}`;
   const event_id = generateUUID();
+
   try{
-    if (window.fbq){
-      fbq("track","Contact",
-        { content_name:"Botón WhatsApp", content_category:"LeadGen", event_source:"LandingPage", source },
-        { eventID: event_id }
-      );
-    }
+    fbq("track","Contact",{content_name:"Botón WhatsApp"},{eventID:event_id});
   }catch{}
 
-  // 3) Tracking AFTER (no await)
-  (async ()=>{
-    const geo = await detectarGeo();
-    const payload = {
-      event_name:"Contact",
-      event_id,
-      external_id: getOrCreateExternalId(),
-      event_source_url: location.href,
-      fbp: getFbp(),
-      fbc: getFbc(),
-      email:getQueryParam("email"),
-      phone:getQueryParam("phone"),
-      utm_campaign:getQueryParam("utm_campaign"),
-      telefono_asignado: cleanPhone,
-      device_type: getDeviceType(),
-      promo_code,
-      source,
-      brand: LANDING_CONFIG.BRAND_NAME,
-      mode: LANDING_CONFIG.MODE,
-      geo_city: geo.city || "",
-      geo_region: geo.region || "",
-      geo_country: geo.country || "",
-      api_meta: picked?.meta || null
-    };
-
-    try{
-      fetch("/api/xz3v2q",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify(payload),
-        keepalive:true
-      });
-    }catch{}
-  })();
-
-  // 4) ✅ REDIRECT INSTANT
-  window.location.assign(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(mensaje)}`);
+  window.location.assign(`https://wa.me/${phone}?text=${encodeURIComponent(mensaje)}`);
 }
 
-/************************************************************
- * ✅ UI wiring
- ************************************************************/
 document.addEventListener("DOMContentLoaded",()=>{
-  // prewarm apenas carga
-  prewarmNumber();
-
-  const btn = document.getElementById("whatsappButton");
+  const btn=document.getElementById("whatsappButton");
   if(btn){
     btn.addEventListener("click",(e)=>{
       e.preventDefault();
-      contactarWhatsApp({ source:"main_button" });
+      contactarWhatsApp();
     });
   }
-
-  const floatBtn=document.getElementById("wa-float-btn");
-  const bubble=document.getElementById("wa-bubble");
-  const closeBtn=document.getElementById("wa-bubble-close");
-  const sendBtn=document.getElementById("wa-send");
-  const input=document.getElementById("wa-input");
-
-  if (input) input.value = LANDING_CONFIG.UI.DEFAULT_INPUT_TEXT || "Hola! Quiero info";
-
-  let openedOnce=false;
-  function openBubble(){ if(bubble){ bubble.classList.add("is-open"); openedOnce=true; } }
-  function closeBubble(){ if(bubble){ bubble.classList.remove("is-open"); } }
-  function toggleBubble(){ if(bubble){ bubble.classList.toggle("is-open"); openedOnce=true; } }
-
-  window.addEventListener("load", ()=>{
-    setTimeout(()=>{ if(!openedOnce) openBubble(); },
-      Number(LANDING_CONFIG.UI.AUTO_OPEN_BUBBLE_MS || 3500)
-    );
-  });
-
-  if(floatBtn) floatBtn.addEventListener("click", toggleBubble);
-  if(closeBtn) closeBtn.addEventListener("click", closeBubble);
-
-  function sendFromBubble(){
-    const text=(input?.value || LANDING_CONFIG.UI.DEFAULT_INPUT_TEXT || "Hola! Quiero info").trim();
-    contactarWhatsApp({ source:"floating", customText:text });
-    closeBubble();
-  }
-  if(sendBtn) sendBtn.addEventListener("click", sendFromBubble);
-  if(input) input.addEventListener("keydown",(e)=>{ if(e.key==="Enter") sendFromBubble(); });
-
-  // reset al volver de WhatsApp
-  function resetAfterReturn(){
-    hideRedirectOverlay();
-    window.__waInFlight=false;
-  }
-  window.addEventListener("pageshow", resetAfterReturn);
-  window.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") resetAfterReturn(); });
 });
 </script>
+
 </body>
 </html>
