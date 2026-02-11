@@ -69,10 +69,21 @@ Ganás y cobrás a cualquier hora
 </div>
 
 <script>
+/*************************************************************
+ * ✅ CONFIG (se mantiene tu lógica tal cual)
+ *************************************************************/
 const LANDING_CONFIG = {
   MODE: "ads",
-  SERVICE_BASE: "/api/get-random-phone",
-  PROMO: { ENABLED: true, LANDING_TAG: "CH1" }
+
+  // ✅ Nuevo: pool cacheado por Vercel
+  POOL_URL: "/api/phones-pool",
+
+  PROMO: { ENABLED: true, LANDING_TAG: "CH1" },
+
+  // ✅ Nuevo: refresh/caché del pool
+  POOL_REFRESH_MS: 15 * 60 * 1000, // 15 min
+  POOL_TTL_MS: 20 * 60 * 1000,     // 20 min (un poco > refresh)
+  POOL_FETCH_TIMEOUT_MS: 1600      // si NO hay cache, cuánto esperamos
 };
 
 function normalizePhoneDigits(raw){
@@ -86,20 +97,93 @@ function generateUUID(){
   });
 }
 
-async function getNumberFromApi(){
-  const res = await fetch(`${LANDING_CONFIG.SERVICE_BASE}?mode=${LANDING_CONFIG.MODE}`,{cache:"no-store"});
-  if(!res.ok) throw new Error("API error");
-  const data = await res.json();
-  return normalizePhoneDigits(data?.number);
+/*************************************************************
+ * ✅ NUEVO: Pool cache + round-robin (sin fallback)
+ *************************************************************/
+const POOL_KEY = "wa_ads_pool";
+const RR_KEY   = "wa_rr_index";
+
+function fetchWithTimeout(url, opt={}, ms=1600){
+  const ctrl = new AbortController();
+  const id = setTimeout(()=>ctrl.abort(), ms);
+  return fetch(url, { ...opt, signal: ctrl.signal }).finally(()=>clearTimeout(id));
 }
 
+function savePool(numbers){
+  try{
+    localStorage.setItem(POOL_KEY, JSON.stringify({ numbers, ts: Date.now() }));
+  }catch{}
+}
+
+function loadPool(){
+  try{
+    const raw = localStorage.getItem(POOL_KEY);
+    if(!raw) return null;
+    const obj = JSON.parse(raw);
+    if(!Array.isArray(obj?.numbers) || obj.numbers.length === 0) return null;
+    if((Date.now() - obj.ts) > LANDING_CONFIG.POOL_TTL_MS) return null;
+
+    const clean = obj.numbers
+      .map(normalizePhoneDigits)
+      .filter(n => /^\d{8,17}$/.test(n));
+
+    return clean.length ? clean : null;
+  }catch{
+    return null;
+  }
+}
+
+function pickRoundRobin(arr){
+  let i = parseInt(localStorage.getItem(RR_KEY) || "0", 10);
+  if (!Number.isFinite(i) || i < 0) i = 0;
+  const n = arr[i % arr.length];
+  localStorage.setItem(RR_KEY, String((i + 1) % arr.length));
+  return n;
+}
+
+async function refreshPoolOnce(){
+  const res = await fetchWithTimeout(
+    LANDING_CONFIG.POOL_URL,
+    { cache:"no-store" },
+    LANDING_CONFIG.POOL_FETCH_TIMEOUT_MS
+  );
+  if(!res.ok) throw new Error("POOL HTTP " + res.status);
+  const data = await res.json();
+
+  const nums = Array.isArray(data?.numbers) ? data.numbers : [];
+  const clean = nums.map(normalizePhoneDigits).filter(n => /^\d{8,17}$/.test(n));
+  if(!clean.length) throw new Error("POOL EMPTY");
+
+  savePool(clean);
+  return clean;
+}
+
+function refreshPoolBackground(){
+  refreshPoolOnce().catch(()=>{});
+}
+
+async function getNumberFromPool(){
+  // 1) cache local (instantáneo)
+  const cached = loadPool();
+  if(cached) return pickRoundRobin(cached);
+
+  // 2) si no hay cache, consultamos pool y recién ahí devolvemos número (SIN FALLBACK)
+  const fresh = await refreshPoolOnce();
+  return pickRoundRobin(fresh);
+}
+
+/*************************************************************
+ * ✅ Tu flujo original (promo_code, mensaje, pixel) TAL CUAL
+ *************************************************************/
 async function contactarWhatsApp(){
   if(window.__waInFlight) return;
   window.__waInFlight=true;
 
   let phone;
   try{
-    phone = await getNumberFromApi();
+    // ✅ antes: await getNumberFromApi()
+    // ✅ ahora: pool cacheado + round-robin
+    phone = await getNumberFromPool();
   }catch{
     window.__waInFlight=false;
     return;
@@ -125,6 +209,17 @@ async function contactarWhatsApp(){
 }
 
 document.addEventListener("DOMContentLoaded",()=>{
+  // ✅ Nuevo: precargar pool (no bloquea)
+  refreshPoolBackground();
+
+  // ✅ Nuevo: refrescar cada 15 min
+  setInterval(refreshPoolBackground, LANDING_CONFIG.POOL_REFRESH_MS);
+
+  // ✅ Nuevo: refrescar al volver a la pestaña
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refreshPoolBackground();
+  });
+
   const btn=document.getElementById("whatsappButton");
   if(btn){
     btn.addEventListener("click",(e)=>{
