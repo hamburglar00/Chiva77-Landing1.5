@@ -74,13 +74,9 @@ Ganás y cobrás a cualquier hora
  *************************************************************/
 const LANDING_CONFIG = {
   MODE: "ads",
-
-  // ✅ Nuevo: pool cacheado por Vercel
   POOL_URL: "/api/phones-pool",
-
   PROMO: { ENABLED: true, LANDING_TAG: "CH1" },
 
-  // ✅ Nuevo: refresh/caché del pool
   POOL_REFRESH_MS: 15 * 60 * 1000, // 15 min
   POOL_TTL_MS: 20 * 60 * 1000,     // 20 min (un poco > refresh)
   POOL_FETCH_TIMEOUT_MS: 1600      // si NO hay cache, cuánto esperamos
@@ -163,17 +159,30 @@ function refreshPoolBackground(){
 }
 
 async function getNumberFromPool(){
-  // 1) cache local (instantáneo)
   const cached = loadPool();
   if(cached) return pickRoundRobin(cached);
-
-  // 2) si no hay cache, consultamos pool y recién ahí devolvemos número (SIN FALLBACK)
   const fresh = await refreshPoolOnce();
   return pickRoundRobin(fresh);
 }
 
 /*************************************************************
- * ✅ Tu flujo original (promo_code, mensaje, pixel) TAL CUAL
+ * ✅ NUEVO: Variantes de mensajes (simple)
+ *************************************************************/
+function buildMensaje(promo_code){
+  const variantes = [
+    "Hola! Quiero info",
+    "Buenas! Me pasás información?",
+    "Hola! Me interesa, me contás más?",
+    "Hola! Cómo es para empezar?",
+    "Buenas! Me explicás cómo funciona?",
+    "Hola! Vi el anuncio y quiero info"
+  ];
+  const base = variantes[Math.floor(Math.random() * variantes.length)];
+  return promo_code ? `${base} ${promo_code}` : base;
+}
+
+/*************************************************************
+ * ✅ Tu flujo original (promo_code, pixel) igual
  *************************************************************/
 async function contactarWhatsApp(){
   if(window.__waInFlight) return;
@@ -181,8 +190,6 @@ async function contactarWhatsApp(){
 
   let phone;
   try{
-    // ✅ antes: await getNumberFromApi()
-    // ✅ ahora: pool cacheado + round-robin
     phone = await getNumberFromPool();
   }catch{
     window.__waInFlight=false;
@@ -198,7 +205,7 @@ async function contactarWhatsApp(){
     ? `${LANDING_CONFIG.PROMO.LANDING_TAG}-${generateUUID().slice(0,8)}`
     : "";
 
-  const mensaje = `Hola! Quiero info ${promo_code}`;
+  const mensaje = buildMensaje(promo_code);
   const event_id = generateUUID();
 
   try{
@@ -209,13 +216,9 @@ async function contactarWhatsApp(){
 }
 
 document.addEventListener("DOMContentLoaded",()=>{
-  // ✅ Nuevo: precargar pool (no bloquea)
   refreshPoolBackground();
-
-  // ✅ Nuevo: refrescar cada 15 min
   setInterval(refreshPoolBackground, LANDING_CONFIG.POOL_REFRESH_MS);
 
-  // ✅ Nuevo: refrescar al volver a la pestaña
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") refreshPoolBackground();
   });
