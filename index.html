@@ -8,10 +8,14 @@
 <link rel="icon" href="imagenes/favicon.png" type="image/png" />
 <link rel="stylesheet" href="./styles.css" />
 
+<!-- Preconnect Meta -->
 <link rel="preconnect" href="https://connect.facebook.net" crossorigin>
 <link rel="dns-prefetch" href="//connect.facebook.net">
+<link rel="preconnect" href="https://www.facebook.com" crossorigin>
+<link rel="dns-prefetch" href="//www.facebook.com">
+
+<!-- Solo AVIF -->
 <link rel="preload" as="image" href="imagenes/fondo.avif" type="image/avif" fetchpriority="high">
-<link rel="preload" as="image" href="imagenes/fondo.png">
 
 <script>
 function normEmail(v){return(v||"").trim().toLowerCase();}
@@ -24,6 +28,7 @@ const userEmail=normEmail(params.get("email"));
 const userPhone=normPhone(params.get("phone"));
 const externalId=getOrCreateExternalId();
 
+/* Meta Pixel */
 !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
 n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
 n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
@@ -45,7 +50,7 @@ src="https://www.facebook.com/tr?id=1849164609062818&ev=PageView&noscript=1"/>
 <div class="overlay"></div>
 <div class="content">
 
-<img src="imagenes/logo.png" class="logo" alt="Logo" decoding="async" fetchpriority="high" />
+<img src="imagenes/logo.png" class="logo" alt="Logo" width="200" height="200" decoding="async" fetchpriority="high" />
 
 <p class="title">
 Envianos un WhatsApp<br />para crear tu cuenta
@@ -70,16 +75,14 @@ Ganás y cobrás a cualquier hora
 
 <script>
 /*************************************************************
- * ✅ CONFIG (se mantiene tu lógica tal cual)
+ * CONFIG
  *************************************************************/
 const LANDING_CONFIG = {
-  MODE: "ads",
   POOL_URL: "/api/phones-pool",
   PROMO: { ENABLED: true, LANDING_TAG: "CH1" },
-
-  POOL_REFRESH_MS: 15 * 60 * 1000, // 15 min
-  POOL_TTL_MS: 20 * 60 * 1000,     // 20 min (un poco > refresh)
-  POOL_FETCH_TIMEOUT_MS: 1600      // si NO hay cache, cuánto esperamos
+  POOL_REFRESH_MS: 15 * 60 * 1000,
+  POOL_TTL_MS: 20 * 60 * 1000,
+  POOL_FETCH_TIMEOUT_MS: 1500
 };
 
 function normalizePhoneDigits(raw){
@@ -87,89 +90,70 @@ function normalizePhoneDigits(raw){
 }
 
 function generateUUID(){
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{
+  return crypto.randomUUID ? crypto.randomUUID() :
+  "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{
     const r=Math.random()*16|0,v=c==="x"?r:r&0x3|0x8;
     return v.toString(16);
   });
 }
 
 /*************************************************************
- * ✅ NUEVO: Pool cache + round-robin (sin fallback)
+ * Pool cache + round-robin
  *************************************************************/
-const POOL_KEY = "wa_ads_pool";
-const RR_KEY   = "wa_rr_index";
+const POOL_KEY="wa_ads_pool";
+const RR_KEY="wa_rr_index";
 
-function fetchWithTimeout(url, opt={}, ms=1600){
-  const ctrl = new AbortController();
-  const id = setTimeout(()=>ctrl.abort(), ms);
-  return fetch(url, { ...opt, signal: ctrl.signal }).finally(()=>clearTimeout(id));
+function fetchWithTimeout(url,opt={},ms=1500){
+  const ctrl=new AbortController();
+  const id=setTimeout(()=>ctrl.abort(),ms);
+  return fetch(url,{...opt,signal:ctrl.signal}).finally(()=>clearTimeout(id));
 }
 
 function savePool(numbers){
-  try{
-    localStorage.setItem(POOL_KEY, JSON.stringify({ numbers, ts: Date.now() }));
-  }catch{}
+  localStorage.setItem(POOL_KEY,JSON.stringify({numbers,ts:Date.now()}));
 }
 
 function loadPool(){
   try{
-    const raw = localStorage.getItem(POOL_KEY);
+    const raw=localStorage.getItem(POOL_KEY);
     if(!raw) return null;
-    const obj = JSON.parse(raw);
-    if(!Array.isArray(obj?.numbers) || obj.numbers.length === 0) return null;
-    if((Date.now() - obj.ts) > LANDING_CONFIG.POOL_TTL_MS) return null;
-
-    const clean = obj.numbers
-      .map(normalizePhoneDigits)
-      .filter(n => /^\d{8,17}$/.test(n));
-
-    return clean.length ? clean : null;
-  }catch{
-    return null;
-  }
+    const obj=JSON.parse(raw);
+    if(!obj?.numbers?.length) return null;
+    if(Date.now()-obj.ts>LANDING_CONFIG.POOL_TTL_MS) return obj.numbers; // usa viejo si expiró
+    return obj.numbers;
+  }catch{return null;}
 }
 
 function pickRoundRobin(arr){
-  let i = parseInt(localStorage.getItem(RR_KEY) || "0", 10);
-  if (!Number.isFinite(i) || i < 0) i = 0;
-  const n = arr[i % arr.length];
-  localStorage.setItem(RR_KEY, String((i + 1) % arr.length));
+  let i=parseInt(localStorage.getItem(RR_KEY)||"0",10);
+  const n=arr[i%arr.length];
+  localStorage.setItem(RR_KEY,(i+1)%arr.length);
   return n;
 }
 
-async function refreshPoolOnce(){
-  const res = await fetchWithTimeout(
-    LANDING_CONFIG.POOL_URL,
-    { cache:"no-store" },
-    LANDING_CONFIG.POOL_FETCH_TIMEOUT_MS
-  );
-  if(!res.ok) throw new Error("POOL HTTP " + res.status);
-  const data = await res.json();
-
-  const nums = Array.isArray(data?.numbers) ? data.numbers : [];
-  const clean = nums.map(normalizePhoneDigits).filter(n => /^\d{8,17}$/.test(n));
-  if(!clean.length) throw new Error("POOL EMPTY");
-
-  savePool(clean);
-  return clean;
+async function refreshPool(){
+  const res=await fetchWithTimeout(LANDING_CONFIG.POOL_URL,{cache:"no-store"},LANDING_CONFIG.POOL_FETCH_TIMEOUT_MS);
+  if(!res.ok) return;
+  const data=await res.json();
+  if(Array.isArray(data?.numbers)&&data.numbers.length){
+    savePool(data.numbers.map(normalizePhoneDigits));
+  }
 }
 
-function refreshPoolBackground(){
-  refreshPoolOnce().catch(()=>{});
-}
-
-async function getNumberFromPool(){
-  const cached = loadPool();
-  if(cached) return pickRoundRobin(cached);
-  const fresh = await refreshPoolOnce();
-  return pickRoundRobin(fresh);
+async function getNumber(){
+  const pool=loadPool();
+  if(pool?.length) return pickRoundRobin(pool);
+  await refreshPool();
+  const pool2=loadPool();
+  if(pool2?.length) return pickRoundRobin(pool2);
+  throw new Error("No pool available");
 }
 
 /*************************************************************
- * ✅ NUEVO: Variantes de mensajes (simple)
+ * Variantes mensaje
  *************************************************************/
 function buildMensaje(promo_code){
-  const variantes = [
+  const variantes=[
     "Hola! Quiero info",
     "Buenas! Me pasás información?",
     "Hola! Me interesa, me contás más?",
@@ -177,59 +161,49 @@ function buildMensaje(promo_code){
     "Buenas! Me explicás cómo funciona?",
     "Hola! Vi el anuncio y quiero info"
   ];
-  const base = variantes[Math.floor(Math.random() * variantes.length)];
-  return promo_code ? `${base} ${promo_code}` : base;
+  const base=variantes[Math.floor(Math.random()*variantes.length)];
+  return promo_code?`${base} ${promo_code}`:base;
 }
 
 /*************************************************************
- * ✅ Tu flujo original (promo_code, pixel) igual
+ * Click
  *************************************************************/
 async function contactarWhatsApp(){
   if(window.__waInFlight) return;
   window.__waInFlight=true;
 
   let phone;
-  try{
-    phone = await getNumberFromPool();
-  }catch{
-    window.__waInFlight=false;
-    return;
-  }
+  try{phone=await getNumber();}
+  catch{window.__waInFlight=false;return;}
 
-  if(!phone){
-    window.__waInFlight=false;
-    return;
-  }
+  const promo_code=LANDING_CONFIG.PROMO.ENABLED
+    ?`${LANDING_CONFIG.PROMO.LANDING_TAG}-${generateUUID().slice(0,8)}`
+    :"";
 
-  const promo_code = LANDING_CONFIG.PROMO.ENABLED
-    ? `${LANDING_CONFIG.PROMO.LANDING_TAG}-${generateUUID().slice(0,8)}`
-    : "";
+  const mensaje=buildMensaje(promo_code);
+  const event_id=generateUUID();
 
-  const mensaje = buildMensaje(promo_code);
-  const event_id = generateUUID();
+  try{fbq("track","Contact",{content_name:"Botón WhatsApp"},{eventID:event_id});}catch{}
 
-  try{
-    fbq("track","Contact",{content_name:"Botón WhatsApp"},{eventID:event_id});
-  }catch{}
+  const url=`https://wa.me/${phone}?text=${encodeURIComponent(mensaje)}`;
 
-  window.location.assign(`https://wa.me/${phone}?text=${encodeURIComponent(mensaje)}`);
+  setTimeout(()=>window.location.assign(url),70);
 }
 
 document.addEventListener("DOMContentLoaded",()=>{
-  refreshPoolBackground();
-  setInterval(refreshPoolBackground, LANDING_CONFIG.POOL_REFRESH_MS);
+  if("requestIdleCallback"in window){
+    requestIdleCallback(refreshPool,{timeout:1200});
+  }else{
+    setTimeout(refreshPool,200);
+  }
 
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") refreshPoolBackground();
-  });
+  setInterval(refreshPool,LANDING_CONFIG.POOL_REFRESH_MS);
 
-  const btn=document.getElementById("whatsappButton");
-  if(btn){
-    btn.addEventListener("click",(e)=>{
+  document.getElementById("whatsappButton")
+    .addEventListener("click",e=>{
       e.preventDefault();
       contactarWhatsApp();
     });
-  }
 });
 </script>
 
