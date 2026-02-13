@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/phones-refresh",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 6 * * *"
     }
   ]
 }

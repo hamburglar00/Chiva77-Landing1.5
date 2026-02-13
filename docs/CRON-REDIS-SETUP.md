@@ -36,7 +36,7 @@ Después de agregar las variables, hacé un **Redeploy** del proyecto para que l
 
 | Componente | Qué hace |
 |------------|----------|
-| **Cron** | Cada 5 min (`*/5 * * * *`) llama a `GET /api/phones-refresh`. |
+| **Cron** | Una vez por día (`0 6 * * *` = 6:00 UTC). En plan Hobby de Vercel los crons solo pueden ser diarios. |
 | **phones-refresh** | Pide números a ases y los guarda en Redis (TTL 20 min). |
 | **phones-pool** | Primero lee de Redis. Si hay datos, responde al instante. Si no, hace fallback a ases. |
 
