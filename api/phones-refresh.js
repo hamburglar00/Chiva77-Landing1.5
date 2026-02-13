@@ -17,12 +17,23 @@ function getRedis() {
   return new Redis({ url, token });
 }
 
+function getSecretFromQuery(req) {
+  try {
+    const url = new URL(req.url || "/", "https://geraganamos.vercel.app");
+    return url.searchParams.get("secret");
+  } catch (_) {
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
-  // Solo permitir GET (Vercel Cron usa GET) o POST con secret
-  const auth = req.headers.authorization;
+  // Autorización: header Authorization: Bearer <CRON_SECRET> o query ?secret=<CRON_SECRET>
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && auth !== `Bearer ${cronSecret}`) {
-    return res.status(401).json({ error: "Unauthorized" });
+  if (cronSecret) {
+    const auth = req.headers?.authorization;
+    const querySecret = req.query?.secret ?? getSecretFromQuery(req);
+    const ok = auth === `Bearer ${cronSecret}` || querySecret === cronSecret;
+    if (!ok) return res.status(401).json({ error: "Unauthorized" });
   }
 
   const redis = getRedis();
