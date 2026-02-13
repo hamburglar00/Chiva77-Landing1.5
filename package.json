@@ -1,0 +1,9 @@
+{
+  "name": "chiva77-landing1.5",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Landing 1.5 con pool de números y Cron + Redis",
+  "dependencies": {
+    "@upstash/redis": "^1.34.0"
+  }
+}

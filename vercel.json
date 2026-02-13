@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/phones-refresh",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
