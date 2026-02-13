@@ -127,6 +127,12 @@ body{
   outline-offset:3px;
 }
 
+/* Mientras prewarm carga: botón deshabilitado hasta tener número (click luego instantáneo) */
+.whatsapp-button.wa-btn-loading{
+  opacity:0.85;
+  cursor:wait;
+}
+
 /* brillo sutil */
 .whatsapp-button::before{
   content:"";
