@@ -7,15 +7,12 @@ const LANDING_CONFIG = {
   SERVICE_BASE: "/api/phones-pool",
 
   // Fallback extremo si todo falla (opcional)
-  EMERGENCY_FALLBACK_NUMBER: "",
-  EMERGENCY_FALLBACK_NAME: "",
+  EMERGENCY_FALLBACK_NUMBER: "5491169789243",
+  EMERGENCY_FALLBACK_NAME: "Soporte",
 
   PROMO: { ENABLED: true, LANDING_TAG: "CH1" },
 
   UI: {
-    DEFAULT_INPUT_TEXT: "Hola! Quiero info",
-    OVERLAY_TEXT: "Abriendo WhatsApp...",
-    OVERLAY_MAX_VISIBLE_MS: 500,
     CLICK_GET_NUMBER_DEADLINE_MS: 2000
   },
 
@@ -55,25 +52,6 @@ function getOrCreateExternalId(){
   let id=localStorage.getItem("external_id");
   if(!id){id=typeof crypto!=="undefined"&&crypto.randomUUID?crypto.randomUUID():generateUUID();localStorage.setItem("external_id",id);}
   return id;
-}
-
-/************************************************************
- * ✅ Overlay
- ************************************************************/
-let __overlayTimer = null;
-function showRedirectOverlay(text){
-  const ov=document.getElementById("wa-redirect-overlay");
-  const tx=document.getElementById("wa-redirect-text");
-  if(tx) tx.textContent=text || LANDING_CONFIG.UI.OVERLAY_TEXT || "Abriendo WhatsApp...";
-  if(ov) ov.hidden=false;
-
-  if(__overlayTimer) clearTimeout(__overlayTimer);
-  __overlayTimer=setTimeout(()=>hideRedirectOverlay(), Number(LANDING_CONFIG.UI.OVERLAY_MAX_VISIBLE_MS||3500));
-}
-function hideRedirectOverlay(){
-  const ov=document.getElementById("wa-redirect-overlay");
-  if(ov) ov.hidden=true;
-  if(__overlayTimer){ clearTimeout(__overlayTimer); __overlayTimer=null; }
 }
 
 /************************************************************
@@ -159,8 +137,6 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
   if (window.__waInFlight) return;
   window.__waInFlight = true;
 
-  showRedirectOverlay(LANDING_CONFIG.UI.OVERLAY_TEXT);
-
   let picked;
   if (__pickedResult) {
     picked = __pickedResult;
@@ -178,7 +154,6 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
 
   const cleanPhone = normalizePhoneDigits(picked?.number);
   if(!/^\d{8,17}$/.test(cleanPhone)){
-    hideRedirectOverlay();
     window.__waInFlight = false;
     return;
   }
@@ -287,7 +262,6 @@ document.addEventListener("DOMContentLoaded",()=>{
     });
 
   function resetAfterReturn(){
-    hideRedirectOverlay();
     window.__waInFlight=false;
   }
   window.addEventListener("pageshow", resetAfterReturn);
