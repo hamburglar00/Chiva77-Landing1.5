@@ -44,12 +44,73 @@ La landing no cambia: sigue llamando a `/api/phones-pool`. La diferencia es que 
 
 ---
 
+## Refresco varias veces al día (plan Hobby)
+
+En plan Hobby, Vercel solo ejecuta el cron **una vez por día**. Si los números disponibles cambian varias veces al día, podés usar un **cron externo gratuito** que llame a tu endpoint cada X minutos.
+
+### Opción A: Con header (recomendado)
+
+Servicios como [cron-job.org](https://cron-job.org) (gratis) permiten configurar un header. Creá un cron que cada 5–15 minutos haga:
+
+- **URL:** `https://geraganamos.vercel.app/api/phones-refresh`
+- **Método:** GET
+- **Header:** `Authorization: Bearer TU_CRON_SECRET` (el mismo valor que en Vercel)
+
+### Opción B: Con secret en la URL
+
+Si el servicio solo permite configurar la URL, podés usar el parámetro `secret`:
+
+- **URL:** `https://geraganamos.vercel.app/api/phones-refresh?secret=TU_CRON_SECRET`
+
+**Importante:** No compartas esta URL; cualquiera que la tenga puede ejecutar el refresh. Si usás opción B, considerá un secret largo y aleatorio.
+
+Así tenés: deploy estable en Hobby + pool actualizado tantas veces al día como configures el cron externo.
+
+---
+
 ## Probar el refresh a mano
 
 Con `CRON_SECRET` configurado:
 
 ```bash
+# Con header
 curl -H "Authorization: Bearer TU_CRON_SECRET" https://geraganamos.vercel.app/api/phones-refresh
+
+# O con query (útil para crons externos que solo permiten URL)
+curl "https://geraganamos.vercel.app/api/phones-refresh?secret=TU_CRON_SECRET"
 ```
 
 Respuesta esperada: `{"ok":true,"count":N,"ts":"...","stored_ttl":1200}`
+
+---
+
+## Cómo verificar que funciona
+
+### 1. ¿De dónde vienen los números?
+
+Abrí en el navegador o con `curl`:
+
+```
+https://geraganamos.vercel.app/api/phones-pool
+```
+
+En la respuesta JSON buscá el campo **`source`**:
+
+- **`"source": "redis"`** → Los números se sirven desde Redis (ruta rápida). El método nuevo está funcionando.
+- **`"source": "upstream"`** → Redis estaba vacío o falló; se usó fallback a ases. Normal si acabas de deployar o si el cron aún no corrió; después del primer refresh debería pasar a `redis`.
+
+### 2. Velocidad
+
+- Con **redis**: la respuesta suele llegar en **pocas decenas de ms** (solo lee de Redis).
+- Con **upstream**: puede tardar **más** (llamada a ases en vivo).
+
+Podés comparar en DevTools (F12 → Network) el tiempo de la petición a `/api/phones-pool` cuando `source` es `redis` vs cuando es `upstream`.
+
+### 3. Que el refresh llene Redis
+
+- Ejecutá a mano el refresh (con tu `CRON_SECRET`) como en la sección anterior. Si ves `{"ok":true,"count":N,...}` → Redis se llenó.
+- Después volvé a llamar a `/api/phones-pool`: debería devolver **`"source": "redis"`**.
+
+### 4. Cron externo (cron-job.org)
+
+En el panel del cron que creaste podés ver el **historial de ejecuciones** (si tenés “Save responses in job history” activado). Ahí ves si cada 10 min el refresh respondió 200 OK.
