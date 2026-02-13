@@ -20,9 +20,11 @@
     function getOrCreateExternalId(){let id=localStorage.getItem("external_id");if(!id){id=safeUUID();localStorage.setItem("external_id",id);}return id;}
 
     const params=new URLSearchParams(location.search);
-    // Nomenclatura Meta: em/ph (prioridad) + email/phone (fallback)
+    // Nomenclatura Meta: em/ph/fn/ln (prioridad) + email/phone (fallback)
     const userEmail=normEmail(params.get("em")||params.get("email")||"");
     const userPhone=normPhone(params.get("ph")||params.get("phone")||"");
+    const userFn=(params.get("fn")||"").trim()||undefined;
+    const userLn=(params.get("ln")||"").trim()||undefined;
     const externalId=getOrCreateExternalId();
 
     !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -33,7 +35,7 @@
 
     window.fbq=window.fbq||function(){};
 
-    fbq("init","TU_PIXEL_ID",{external_id:externalId,em:userEmail||void 0,ph:userPhone||void 0,country:"AR"});
+    fbq("init","TU_PIXEL_ID",{external_id:externalId,em:userEmail||void 0,ph:userPhone||void 0,fn:userFn,ln:userLn,country:"AR"});
     fbq("track","PageView");
   </script>
   <noscript><img height="1" width="1" style="display:none"
@@ -285,6 +287,8 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
       fbq("track","Contact",{
         em: userEmail || undefined,
         ph: userPhone || undefined,
+        fn: userFn,
+        ln: userLn,
         external_id: externalId,
         content_name: "Botón WhatsApp",
         content_category: "LeadGen",
@@ -311,6 +315,8 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
       fbc: getFbc(),
       email: getQueryParam("em") || getQueryParam("email"),
       phone: getQueryParam("ph") || getQueryParam("phone"),
+      fn: getQueryParam("fn") || undefined,
+      ln: getQueryParam("ln") || undefined,
       utm_campaign:getQueryParam("utm_campaign"),
       telefono_asignado: cleanPhone,
       device_type: getDeviceType(),
