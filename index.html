@@ -20,8 +20,9 @@
     function getOrCreateExternalId(){let id=localStorage.getItem("external_id");if(!id){id=safeUUID();localStorage.setItem("external_id",id);}return id;}
 
     const params=new URLSearchParams(location.search);
-    const userEmail=normEmail(params.get("email"));
-    const userPhone=normPhone(params.get("phone"));
+    // Nomenclatura Meta: em/ph (prioridad) + email/phone (fallback)
+    const userEmail=normEmail(params.get("em")||params.get("email")||"");
+    const userPhone=normPhone(params.get("ph")||params.get("phone")||"");
     const externalId=getOrCreateExternalId();
 
     !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -277,14 +278,24 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
     ? (promo_code ? `${String(customText).trim()} ${promo_code}` : String(customText).trim())
     : buildMensaje(promo_code, picked?.name);
 
-  // 2) Pixel (no bloquea)
+  // 2) Pixel Contact enriquecido (nomenclatura Meta: em, ph, eventID)
   const event_id = generateUUID();
   try{
     if (window.fbq){
-      fbq("track","Contact",
-        { content_name:"Botón WhatsApp", content_category:"LeadGen", event_source:"LandingPage", source },
-        { eventID: event_id }
-      );
+      fbq("track","Contact",{
+        em: userEmail || undefined,
+        ph: userPhone || undefined,
+        external_id: externalId,
+        content_name: "Botón WhatsApp",
+        content_category: "LeadGen",
+        source: source,
+        method: "Click",
+        event_source: "LandingPage",
+        utm_campaign: getQueryParam("utm_campaign") || undefined,
+        promo_code: promo_code || undefined,
+        device_type: getDeviceType(),
+        brand: LANDING_CONFIG.BRAND_NAME || undefined
+      },{ eventID: event_id });
     }
   }catch{}
 
@@ -298,8 +309,8 @@ async function contactarWhatsApp({ source="main_button", customText=null } = {})
       event_source_url: location.href,
       fbp: getFbp(),
       fbc: getFbc(),
-      email:getQueryParam("email"),
-      phone:getQueryParam("phone"),
+      email: getQueryParam("em") || getQueryParam("email"),
+      phone: getQueryParam("ph") || getQueryParam("phone"),
       utm_campaign:getQueryParam("utm_campaign"),
       telefono_asignado: cleanPhone,
       device_type: getDeviceType(),
