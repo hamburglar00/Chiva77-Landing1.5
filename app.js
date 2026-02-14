@@ -99,14 +99,10 @@ function buildMensaje(promo_code, botName){
 let __pickedPromise = null;
 let __pickedResult = null;
 
-function pickNextRoundRobin(arr, key="b300_rr_idx"){
+function pickRandom(arr){
   const n = arr.length;
   if (!n) return null;
-  let i = parseInt(localStorage.getItem(key) || "0", 10);
-  if (!Number.isFinite(i) || i < 0) i = 0;
-  const picked = arr[i % n];
-  localStorage.setItem(key, String((i + 1) % n));
-  return picked;
+  return arr[Math.floor(Math.random() * n)];
 }
 
 async function getNumberFromApi(){
@@ -121,7 +117,7 @@ async function getNumberFromApi(){
   const list = Array.isArray(data?.numbers) ? data.numbers : [];
   const cleanList = list.map(normalizePhoneDigits).filter(n => /^\d{8,17}$/.test(n));
   if(!cleanList.length) throw new Error("NO_NUMBERS_IN_POOL");
-  const number = pickNextRoundRobin(cleanList) || cleanList[0];
+  const number = pickRandom(cleanList) || cleanList[0];
   return { number, name: LANDING_CONFIG.BRAND_NAME, meta: data };
 }
 
