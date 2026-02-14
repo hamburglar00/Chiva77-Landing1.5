@@ -31,7 +31,7 @@ Landing page con redirección a WhatsApp usando **números dinámicos** obtenido
 │     → Botón cambia a "¡Contactar ya!"                                │
 │                                                                      │
 │  2. Click botón                                                      │
-│     → Número ya en memoria (round-robin)                             │
+│     → Número ya en memoria (aleatorio)                               │
 │     → Promo code generado                                            │
 │     → Pixel Contact enriquecido (no bloquea)                         │
 │     → (async) GEO + fetch /api/xz3v2q → Sheets (no bloquea)         │
@@ -135,18 +135,19 @@ A diferencia de 1.0/1.25 (donde el número está listo al instante), la 1.5 nece
 4. **Si falla**: usa `EMERGENCY_FALLBACK_NUMBER` y habilita el botón igual.
 5. **Al hacer click**: usa `__pickedResult` (ya en memoria). No espera nada. Redirect instantáneo.
 
-### Round-robin dinámico
+### Selección aleatoria dinámica
 
-El array de números viene de la API (no hardcodeado). Se aplica round-robin con `localStorage`:
+El array de números viene de la API (no hardcodeado). Se elige uno al azar:
 
 ```javascript
-function pickNextRoundRobin(arr, key="b300_rr_idx") {
-  let i = parseInt(localStorage.getItem(key) || "0", 10);
-  const picked = arr[i % arr.length];
-  localStorage.setItem(key, String((i + 1) % arr.length));
-  return picked;
+function pickRandom(arr) {
+  const n = arr.length;
+  if (!n) return null;
+  return arr[Math.floor(Math.random() * n)];
 }
 ```
+
+Cada usuario recibe un número aleatorio independiente, distribuyendo el tráfico de forma pareja entre todos los números disponibles en el pool.
 
 ### Fallback de emergencia
 
