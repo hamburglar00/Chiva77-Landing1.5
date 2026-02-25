@@ -1,5 +1,5 @@
 /**
- * Lógica compartida: obtener números desde ases (upstream)
+ * Lógica compartida: obtener números desde ases.. (upstream)
  */
 
 export const UPSTREAM_CONFIG = {
