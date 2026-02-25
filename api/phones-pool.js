@@ -1,5 +1,5 @@
 // /api/phones-pool.js
-// 1) Lee desde Redis (llenado por el cron phones-refresh) → respuesta rápida
+// 1) Lee desde Redis (llenado por el cron phones-refresh) → respuesta rápida..
 // 2) Si Redis vacío o no configurado, fallback a ases (comportamiento anterior)
 
 import { Redis } from "@upstash/redis";
